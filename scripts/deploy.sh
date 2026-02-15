@@ -1,12 +1,13 @@
 #!/bin/bash
 # ─────────────────────────────────────────────────────────────
 # Deploy script for IU Alumni stack.
-# Run on the server: ./deploy.sh [init|deploy|ssl-init|ssl-renew]
+# Run on the server: ./deploy.sh [init|deploy|pull|ssl-init|ssl-renew]
 # ─────────────────────────────────────────────────────────────
 
 set -euo pipefail
 
 DEPLOY_DIR="/home/deploy/iu-alumni"
+INFRA_DIR="${DEPLOY_DIR}/infra"
 STACK_NAME="iu_alumni"
 
 cd "$DEPLOY_DIR"
@@ -26,16 +27,22 @@ case "${1:-deploy}" in
     docker network create --driver overlay --attachable iu_alumni_network 2>/dev/null || echo "Network already exists"
 
     echo "=== Making init-databases.sh executable ==="
-    chmod +x docker/init-databases.sh
+    chmod +x "${INFRA_DIR}/docker/init-databases.sh"
 
     echo "=== Deploying stack ==="
-    docker stack deploy -c docker/stack.yml "$STACK_NAME"
-    echo "=== Done! Run './scripts/deploy.sh ssl-init' next to set up SSL ==="
+    docker stack deploy -c "${INFRA_DIR}/docker/stack.yml" "$STACK_NAME"
+    echo "=== Done! Run './deploy.sh ssl-init' next to set up SSL ==="
+    ;;
+
+  pull)
+    echo "=== Pulling latest infra changes ==="
+    cd "$INFRA_DIR" && git pull
+    echo "=== Done ==="
     ;;
 
   deploy)
     echo "=== Deploying/updating stack ==="
-    docker stack deploy -c docker/stack.yml "$STACK_NAME"
+    docker stack deploy -c "${INFRA_DIR}/docker/stack.yml" "$STACK_NAME"
     echo "=== Done ==="
     ;;
 
@@ -44,7 +51,7 @@ case "${1:-deploy}" in
     EMAIL="${EMAIL:?Set EMAIL env var}"
 
     echo "=== Setting up initial nginx config for certbot ==="
-    sed "s/\${DOMAIN}/$DOMAIN/g" nginx/app-init.conf.template > nginx/conf.d/app.conf
+    sed "s/\${DOMAIN}/$DOMAIN/g" "${INFRA_DIR}/nginx/app-init.conf.template" > "${DEPLOY_DIR}/nginx/conf.d/app.conf"
 
     echo "=== Reloading nginx ==="
     docker exec "$(docker ps -q -f name=${STACK_NAME}_nginx)" nginx -s reload || true
@@ -56,7 +63,7 @@ case "${1:-deploy}" in
       -d "$DOMAIN" --email "$EMAIL" --agree-tos --no-eff-email
 
     echo "=== Switching to full HTTPS config ==="
-    sed "s/\${DOMAIN}/$DOMAIN/g" nginx/app.conf.template > nginx/conf.d/app.conf
+    sed "s/\${DOMAIN}/$DOMAIN/g" "${INFRA_DIR}/nginx/app.conf.template" > "${DEPLOY_DIR}/nginx/conf.d/app.conf"
 
     echo "=== Reloading nginx ==="
     docker exec "$(docker ps -q -f name=${STACK_NAME}_nginx)" nginx -s reload
@@ -72,7 +79,7 @@ case "${1:-deploy}" in
     ;;
 
   *)
-    echo "Usage: $0 [init|deploy|ssl-init|ssl-renew]"
+    echo "Usage: $0 [init|deploy|pull|ssl-init|ssl-renew]"
     exit 1
     ;;
 esac

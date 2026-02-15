@@ -8,8 +8,29 @@
   hosts: all
   become: true
 
+  vars:
+    repo_url: "{{ infra_repo_url | default('https://github.com/iu-alumni/iu-alumni-infra.git') }}"
+    repo_branch: "{{ 'develop' if 'testing' in group_names else 'main' }}"
+
   tasks:
-    - name: Ensure deploy directories exist
+    - name: Ensure deploy directory exists
+      ansible.builtin.file:
+        path: "{{ deploy_dir }}"
+        state: directory
+        owner: "{{ ansible_user }}"
+        group: "{{ ansible_user }}"
+        mode: "0755"
+
+    - name: Clone or update infra repo
+      become_user: "{{ ansible_user }}"
+      ansible.builtin.git:
+        repo: "{{ repo_url }}"
+        dest: "{{ deploy_dir }}/infra"
+        version: "{{ repo_branch }}"
+        force: true
+      register: git_result
+
+    - name: Ensure data directories exist
       ansible.builtin.file:
         path: "{{ item }}"
         state: directory
@@ -17,73 +38,28 @@
         group: "{{ ansible_user }}"
         mode: "0755"
       loop:
-        - "{{ deploy_dir }}"
         - "{{ deploy_dir }}/nginx/conf.d"
         - "{{ deploy_dir }}/nginx/certbot/conf"
         - "{{ deploy_dir }}/nginx/certbot/www"
         - "{{ deploy_dir }}/data/postgres"
         - "{{ deploy_dir }}/data/minio"
-        - "{{ deploy_dir }}/loki"
-        - "{{ deploy_dir }}/promtail"
 
-    - name: Sync docker config
-      ansible.builtin.copy:
-        src: "{{ playbook_dir }}/../../docker/"
-        dest: "{{ deploy_dir }}/docker/"
-        owner: "{{ ansible_user }}"
-        group: "{{ ansible_user }}"
-        mode: "0644"
-
-    - name: Sync nginx configs
-      ansible.builtin.copy:
-        src: "{{ playbook_dir }}/../../nginx/"
-        dest: "{{ deploy_dir }}/nginx/"
-        owner: "{{ ansible_user }}"
-        group: "{{ ansible_user }}"
-        mode: "0644"
-
-    - name: Sync Loki config
-      ansible.builtin.copy:
-        src: "{{ playbook_dir }}/../../loki/"
-        dest: "{{ deploy_dir }}/loki/"
-        owner: "{{ ansible_user }}"
-        group: "{{ ansible_user }}"
-        mode: "0644"
-
-    - name: Sync Promtail config
-      ansible.builtin.copy:
-        src: "{{ playbook_dir }}/../../promtail/"
-        dest: "{{ deploy_dir }}/promtail/"
-        owner: "{{ ansible_user }}"
-        group: "{{ ansible_user }}"
-        mode: "0644"
-
-    - name: Sync deploy scripts
-      ansible.builtin.copy:
-        src: "{{ playbook_dir }}/../../scripts/"
-        dest: "{{ deploy_dir }}/scripts/"
-        owner: "{{ ansible_user }}"
-        group: "{{ ansible_user }}"
-        mode: "0755"
-
-    - name: Make deploy script executable
+    - name: Make scripts executable
       ansible.builtin.file:
-        path: "{{ deploy_dir }}/scripts/deploy.sh"
+        path: "{{ item }}"
         mode: "0755"
-
-    - name: Make init-databases executable
-      ansible.builtin.file:
-        path: "{{ deploy_dir }}/docker/init-databases.sh"
-        mode: "0755"
+      loop:
+        - "{{ deploy_dir }}/infra/scripts/deploy.sh"
+        - "{{ deploy_dir }}/infra/docker/init-databases.sh"
 
     - name: Check if SSL certs exist
       ansible.builtin.stat:
         path: "{{ deploy_dir }}/nginx/certbot/conf/live/{{ domain }}/fullchain.pem"
       register: ssl_cert
 
-    - name: Copy nginx config template (SSL)
+    - name: Generate nginx config from template (SSL)
       ansible.builtin.copy:
-        src: "{{ deploy_dir }}/nginx/app.conf.template"
+        src: "{{ deploy_dir }}/infra/nginx/app.conf.template"
         dest: "{{ deploy_dir }}/nginx/conf.d/app.conf"
         remote_src: true
         owner: "{{ ansible_user }}"
@@ -91,9 +67,9 @@
         mode: "0644"
       when: ssl_cert.stat.exists
 
-    - name: Copy nginx config template (no SSL)
+    - name: Generate nginx config from template (no SSL)
       ansible.builtin.copy:
-        src: "{{ deploy_dir }}/nginx/app-init.conf.template"
+        src: "{{ deploy_dir }}/infra/nginx/app-init.conf.template"
         dest: "{{ deploy_dir }}/nginx/conf.d/app.conf"
         remote_src: true
         owner: "{{ ansible_user }}"

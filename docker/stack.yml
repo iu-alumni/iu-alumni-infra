@@ -121,7 +121,7 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     volumes:
       - /home/deploy/iu-alumni/data/postgres:/var/lib/postgresql/data
-      - /home/deploy/iu-alumni/docker/init-databases.sh:/docker-entrypoint-initdb.d/init-databases.sh:ro
+      - /home/deploy/iu-alumni/infra/docker/init-databases.sh:/docker-entrypoint-initdb.d/init-databases.sh:ro
     networks:
       - iu_alumni_network
     deploy:
@@ -139,6 +139,7 @@ services:
     environment:
       MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+      MINIO_BROWSER_REDIRECT_URL: https://${DOMAIN}/minio/
     volumes:
       - /home/deploy/iu-alumni/data/minio:/data
     networks:
@@ -151,7 +152,7 @@ services:
   # ── Portainer (Docker management) ─────────────────────
   portainer:
     image: portainer/portainer-ce:latest
-    command: -H unix:///var/run/docker.sock
+    command: -H unix:///var/run/docker.sock --base-url /portainer
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - portainer_data:/data
@@ -168,7 +169,7 @@ services:
     image: grafana/loki:3.0.0
     command: -config.file=/etc/loki/loki-config.yml
     volumes:
-      - /home/deploy/iu-alumni/loki/loki-config.yml:/etc/loki/loki-config.yml:ro
+      - /home/deploy/iu-alumni/infra/loki/loki-config.yml:/etc/loki/loki-config.yml:ro
       - loki_data:/loki
     networks:
       - iu_alumni_network
@@ -182,7 +183,7 @@ services:
     image: grafana/promtail:3.0.0
     command: -config.file=/etc/promtail/promtail-config.yml
     volumes:
-      - /home/deploy/iu-alumni/promtail/promtail-config.yml:/etc/promtail/promtail-config.yml:ro
+      - /home/deploy/iu-alumni/infra/promtail/promtail-config.yml:/etc/promtail/promtail-config.yml:ro
       - /var/log:/var/log:ro
       - /var/lib/docker/containers:/var/lib/docker/containers:ro
     networks:
