@@ -124,7 +124,7 @@
         version: master
       loop: "{{ zsh_plugins }}"
 
-    - name: Configure .zshrc
+    - name: Configure zshrc
       become_user: "{{ ansible_user }}"
       copy:
         dest: "/home/{{ ansible_user }}/.zshrc"
