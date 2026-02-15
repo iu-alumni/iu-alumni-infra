@@ -16,7 +16,10 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y shellcheck
-          pip install yamllint ansible-lint
+          pip install yamllint ansible-lint ansible
+
+      - name: Install Ansible collections
+        run: ansible-galaxy collection install ansible.posix community.general
 
       - name: YAML lint
         run: yamllint -d relaxed .
