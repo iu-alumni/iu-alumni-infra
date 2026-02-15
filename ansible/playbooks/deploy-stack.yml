@@ -94,10 +94,8 @@
     - name: Deploy Docker stack
       become: true
       become_user: "{{ ansible_user }}"
-      ansible.builtin.shell:
-        cmd: |
-          cd {{ deploy_dir }} && docker stack deploy -c docker/stack.yml iu_alumni
-        executable: /bin/bash
+      ansible.builtin.command:
+        cmd: "{{ deploy_dir }}/scripts/deploy.sh deploy"
       environment:
         PATH: "/usr/local/bin:/usr/bin:/bin"
       changed_when: true

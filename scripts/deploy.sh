@@ -11,6 +11,14 @@ STACK_NAME="iu_alumni"
 
 cd "$DEPLOY_DIR"
 
+# Load environment variables for docker stack deploy
+if [ -f "$DEPLOY_DIR/.env" ]; then
+  set -a
+  # shellcheck source=/dev/null
+  . "$DEPLOY_DIR/.env"
+  set +a
+fi
+
 case "${1:-deploy}" in
   init)
     echo "=== Initializing Docker Swarm and network ==="
