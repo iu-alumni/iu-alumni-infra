@@ -131,7 +131,7 @@
       become: true
       become_user: "{{ ansible_user }}"
       ansible.builtin.template:
-        src: "{{ playbook_dir }}/../templates/zshrc.j2"
+        src: zshrc.j2
         dest: "/home/{{ ansible_user }}/.zshrc"
         mode: "0644"
 
