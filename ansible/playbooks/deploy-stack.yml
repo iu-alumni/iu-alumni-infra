@@ -8,9 +8,6 @@
   hosts: all
   become: true
 
-  vars:
-    deploy_dir: /home/deploy/iu-alumni
-
   tasks:
     - name: Ensure deploy directories exist
       ansible.builtin.file:
@@ -29,44 +26,47 @@
         - "{{ deploy_dir }}/loki"
         - "{{ deploy_dir }}/promtail"
 
-    - name: Sync stack configuration files
-      become: true
-      become_user: "{{ ansible_user }}"
-      ansible.posix.synchronize:
+    - name: Sync docker config
+      ansible.builtin.copy:
         src: "{{ playbook_dir }}/../../docker/"
         dest: "{{ deploy_dir }}/docker/"
-        delete: true
+        owner: "{{ ansible_user }}"
+        group: "{{ ansible_user }}"
+        mode: "0644"
 
     - name: Sync nginx configs
-      become: true
-      become_user: "{{ ansible_user }}"
-      ansible.posix.synchronize:
+      ansible.builtin.copy:
         src: "{{ playbook_dir }}/../../nginx/"
         dest: "{{ deploy_dir }}/nginx/"
-        delete: false
+        owner: "{{ ansible_user }}"
+        group: "{{ ansible_user }}"
+        mode: "0644"
 
     - name: Sync Loki config
-      become: true
-      become_user: "{{ ansible_user }}"
-      ansible.posix.synchronize:
+      ansible.builtin.copy:
         src: "{{ playbook_dir }}/../../loki/"
         dest: "{{ deploy_dir }}/loki/"
+        owner: "{{ ansible_user }}"
+        group: "{{ ansible_user }}"
+        mode: "0644"
 
     - name: Sync Promtail config
-      become: true
-      become_user: "{{ ansible_user }}"
-      ansible.posix.synchronize:
+      ansible.builtin.copy:
         src: "{{ playbook_dir }}/../../promtail/"
         dest: "{{ deploy_dir }}/promtail/"
+        owner: "{{ ansible_user }}"
+        group: "{{ ansible_user }}"
+        mode: "0644"
 
     - name: Sync deploy scripts
-      become: true
-      become_user: "{{ ansible_user }}"
-      ansible.posix.synchronize:
+      ansible.builtin.copy:
         src: "{{ playbook_dir }}/../../scripts/"
         dest: "{{ deploy_dir }}/scripts/"
+        owner: "{{ ansible_user }}"
+        group: "{{ ansible_user }}"
+        mode: "0755"
 
-    - name: Make scripts executable
+    - name: Make deploy script executable
       ansible.builtin.file:
         path: "{{ deploy_dir }}/scripts/deploy.sh"
         mode: "0755"
