@@ -26,12 +26,20 @@ else
     echo "User $USERNAME created (password set to username)"
 fi
 
-# Grant sudo if requested (passwordless, since there is no password)
+# Grant sudo if requested
 if [ "$GRANT_SUDO" == "sudo" ]; then
     usermod -aG sudo "$USERNAME"
-    echo "$USERNAME ALL=(ALL) NOPASSWD:ALL" > "/etc/sudoers.d/$USERNAME"
-    chmod 440 "/etc/sudoers.d/$USERNAME"
-    echo "User $USERNAME granted passwordless sudo"
+    echo "User $USERNAME added to sudo group"
+fi
+
+# Ensure passwordless sudo is configured
+SUDOERS_FILE="/etc/sudoers.d/$USERNAME"
+if [ ! -f "$SUDOERS_FILE" ] || ! grep -q "NOPASSWD" "$SUDOERS_FILE"; then
+    echo "$USERNAME ALL=(ALL) NOPASSWD:ALL" > "$SUDOERS_FILE"
+    chmod 440 "$SUDOERS_FILE"
+    echo "Passwordless sudo configured for $USERNAME"
+else
+    echo "Passwordless sudo already configured for $USERNAME"
 fi
 
 # Setup SSH directory
