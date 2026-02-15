@@ -76,7 +76,12 @@
         path: "{{ deploy_dir }}/docker/init-databases.sh"
         mode: "0755"
 
-    - name: Copy nginx config template
+    - name: Check if SSL certs exist
+      ansible.builtin.stat:
+        path: "{{ deploy_dir }}/nginx/certbot/conf/live/{{ domain }}/fullchain.pem"
+      register: ssl_cert
+
+    - name: Copy nginx config template (SSL)
       ansible.builtin.copy:
         src: "{{ deploy_dir }}/nginx/app.conf.template"
         dest: "{{ deploy_dir }}/nginx/conf.d/app.conf"
@@ -84,6 +89,17 @@
         owner: "{{ ansible_user }}"
         group: "{{ ansible_user }}"
         mode: "0644"
+      when: ssl_cert.stat.exists
+
+    - name: Copy nginx config template (no SSL)
+      ansible.builtin.copy:
+        src: "{{ deploy_dir }}/nginx/app-init.conf.template"
+        dest: "{{ deploy_dir }}/nginx/conf.d/app.conf"
+        remote_src: true
+        owner: "{{ ansible_user }}"
+        group: "{{ ansible_user }}"
+        mode: "0644"
+      when: not ssl_cert.stat.exists
 
     - name: Set domain in nginx config
       ansible.builtin.replace:
