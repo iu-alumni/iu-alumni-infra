@@ -13,7 +13,7 @@
 
   tasks:
     - name: Ensure deploy directories exist
-      file:
+      ansible.builtin.file:
         path: "{{ item }}"
         state: directory
         owner: "{{ ansible_user }}"
@@ -30,58 +30,74 @@
         - "{{ deploy_dir }}/promtail"
 
     - name: Sync stack configuration files
-      synchronize:
+      become: true
+      become_user: "{{ ansible_user }}"
+      ansible.posix.synchronize:
         src: "{{ playbook_dir }}/../../docker/"
         dest: "{{ deploy_dir }}/docker/"
-        delete: yes
-      become_user: "{{ ansible_user }}"
+        delete: true
 
     - name: Sync nginx configs
-      synchronize:
+      become: true
+      become_user: "{{ ansible_user }}"
+      ansible.posix.synchronize:
         src: "{{ playbook_dir }}/../../nginx/"
         dest: "{{ deploy_dir }}/nginx/"
-        delete: no
-      become_user: "{{ ansible_user }}"
+        delete: false
 
     - name: Sync Loki config
-      synchronize:
+      become: true
+      become_user: "{{ ansible_user }}"
+      ansible.posix.synchronize:
         src: "{{ playbook_dir }}/../../loki/"
         dest: "{{ deploy_dir }}/loki/"
-      become_user: "{{ ansible_user }}"
 
     - name: Sync Promtail config
-      synchronize:
+      become: true
+      become_user: "{{ ansible_user }}"
+      ansible.posix.synchronize:
         src: "{{ playbook_dir }}/../../promtail/"
         dest: "{{ deploy_dir }}/promtail/"
-      become_user: "{{ ansible_user }}"
 
     - name: Sync deploy scripts
-      synchronize:
+      become: true
+      become_user: "{{ ansible_user }}"
+      ansible.posix.synchronize:
         src: "{{ playbook_dir }}/../../scripts/"
         dest: "{{ deploy_dir }}/scripts/"
-      become_user: "{{ ansible_user }}"
 
     - name: Make scripts executable
-      file:
+      ansible.builtin.file:
         path: "{{ deploy_dir }}/scripts/deploy.sh"
         mode: "0755"
 
     - name: Make init-databases executable
-      file:
+      ansible.builtin.file:
         path: "{{ deploy_dir }}/docker/init-databases.sh"
         mode: "0755"
 
-    - name: Generate nginx config from template
-      shell: |
-        sed 's/${DOMAIN}/{{ domain }}/g' \
-          {{ deploy_dir }}/nginx/app.conf.template \
-          > {{ deploy_dir }}/nginx/conf.d/app.conf
-      become_user: "{{ ansible_user }}"
+    - name: Copy nginx config template
+      ansible.builtin.copy:
+        src: "{{ deploy_dir }}/nginx/app.conf.template"
+        dest: "{{ deploy_dir }}/nginx/conf.d/app.conf"
+        remote_src: true
+        owner: "{{ ansible_user }}"
+        group: "{{ ansible_user }}"
+        mode: "0644"
+
+    - name: Set domain in nginx config
+      ansible.builtin.replace:
+        path: "{{ deploy_dir }}/nginx/conf.d/app.conf"
+        regexp: '\$\{DOMAIN\}'
+        replace: "{{ domain }}"
 
     - name: Deploy Docker stack
-      shell: |
-        cd {{ deploy_dir }} && \
-        docker stack deploy -c docker/stack.yml iu_alumni
+      become: true
       become_user: "{{ ansible_user }}"
+      ansible.builtin.shell:
+        cmd: |
+          cd {{ deploy_dir }} && docker stack deploy -c docker/stack.yml iu_alumni
+        executable: /bin/bash
       environment:
         PATH: "/usr/local/bin:/usr/bin:/bin"
+      changed_when: true
