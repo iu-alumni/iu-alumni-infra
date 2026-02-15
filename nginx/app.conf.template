@@ -39,6 +39,11 @@ server {
     ssl_session_cache shared:SSL:10m;
     ssl_session_timeout 1d;
 
+    # Docker internal DNS resolver - forces re-resolution of service names
+    # so nginx picks up new container IPs after redeployment
+    resolver 127.0.0.11 valid=10s ipv6=off;
+    resolver_timeout 5s;
+
     # Security headers
     add_header X-Frame-Options "SAMEORIGIN" always;
     add_header X-Content-Type-Options "nosniff" always;
@@ -51,7 +56,8 @@ server {
     # ── Frontend (Nuxt 3 SSR) ──────────────────────────
     # Uncomment when frontend is deployed
     # location / {
-    #     proxy_pass http://frontend:3000;
+    #     set $upstream_frontend frontend;
+    #     proxy_pass http://$upstream_frontend:3000;
     #     proxy_http_version 1.1;
     #     proxy_set_header Upgrade $http_upgrade;
     #     proxy_set_header Connection "upgrade";
@@ -70,8 +76,9 @@ server {
     # ── Backend API (FastAPI) ──────────────────────────
     # Uncomment when backend is deployed
     # location /api/ {
+    #     set $upstream_backend backend;
     #     rewrite ^/api/(.*) /$1 break;
-    #     proxy_pass http://backend:8080;
+    #     proxy_pass http://$upstream_backend:8080;
     #     proxy_http_version 1.1;
     #     proxy_set_header Host $host;
     #     proxy_set_header X-Real-IP $remote_addr;
@@ -82,8 +89,9 @@ server {
     # ── Bot (Express.js) ──────────────────────────────
     # Uncomment when bot is deployed
     # location /bot/ {
+    #     set $upstream_bot bot;
     #     rewrite ^/bot/(.*) /$1 break;
-    #     proxy_pass http://bot:3001;
+    #     proxy_pass http://$upstream_bot:3001;
     #     proxy_http_version 1.1;
     #     proxy_set_header Host $host;
     #     proxy_set_header X-Real-IP $remote_addr;
@@ -93,8 +101,9 @@ server {
 
     # ── MinIO Console ─────────────────────────────────
     location /minio/ {
+        set $upstream_minio_console minio;
         rewrite ^/minio/(.*) /$1 break;
-        proxy_pass http://minio:9001;
+        proxy_pass http://$upstream_minio_console:9001;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection "upgrade";
@@ -106,8 +115,9 @@ server {
 
     # ── MinIO S3 API ──────────────────────────────────
     location /s3/ {
+        set $upstream_minio_s3 minio;
         rewrite ^/s3/(.*) /$1 break;
-        proxy_pass http://minio:9000;
+        proxy_pass http://$upstream_minio_s3:9000;
         proxy_http_version 1.1;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
@@ -117,8 +127,9 @@ server {
 
     # ── Portainer ─────────────────────────────────────
     location /portainer/ {
+        set $upstream_portainer portainer;
         rewrite ^/portainer/(.*) /$1 break;
-        proxy_pass http://portainer:9000;
+        proxy_pass http://$upstream_portainer:9000;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection "upgrade";
@@ -130,7 +141,8 @@ server {
 
     # ── Grafana ───────────────────────────────────────
     location /grafana/ {
-        proxy_pass http://grafana:3000;
+        set $upstream_grafana grafana;
+        proxy_pass http://$upstream_grafana:3000;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection "upgrade";
