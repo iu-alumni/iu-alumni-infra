@@ -1,0 +1,73 @@
+name: Deploy Infrastructure
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - 'docker/**'
+      - 'nginx/**'
+      - 'loki/**'
+      - 'promtail/**'
+      - 'scripts/**'
+      - 'ansible/**'
+
+jobs:
+  deploy-testing:
+    if: github.ref == 'refs/heads/develop'
+    runs-on: ubuntu-latest
+    environment: testing
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Ansible and rsync
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ansible rsync
+
+      - name: Write SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SERVER_SSH_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H ${{ secrets.TEST_SERVER_HOST }} >> ~/.ssh/known_hosts 2>/dev/null
+
+      - name: Run deploy playbook
+        working-directory: ansible
+        env:
+          ANSIBLE_HOST_KEY_CHECKING: "false"
+        run: |
+          ansible-playbook playbooks/deploy-stack.yml \
+            --limit testing \
+            -e "test_server_ip=${{ secrets.TEST_SERVER_HOST }}" \
+            -e "server_user=${{ secrets.SERVER_USER }}" \
+            --private-key ~/.ssh/deploy_key
+
+  deploy-production:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Ansible and rsync
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ansible rsync
+
+      - name: Write SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SERVER_SSH_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H ${{ secrets.PROD_SERVER_HOST }} >> ~/.ssh/known_hosts 2>/dev/null
+
+      - name: Run deploy playbook
+        working-directory: ansible
+        env:
+          ANSIBLE_HOST_KEY_CHECKING: "false"
+        run: |
+          ansible-playbook playbooks/deploy-stack.yml \
+            --limit production \
+            -e "prod_server_ip=${{ secrets.PROD_SERVER_HOST }}" \
+            -e "server_user=${{ secrets.SERVER_USER }}" \
+            --private-key ~/.ssh/deploy_key

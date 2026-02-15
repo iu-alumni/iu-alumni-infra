@@ -1,0 +1,235 @@
+---
+# Main playbook to set up a fresh server with all required tools.
+# Usage:
+#   ansible-playbook playbooks/setup-server.yml -e "test_server_ip=X.X.X.X prod_server_ip=Y.Y.Y.Y server_user=deploy"
+#
+# To run only on testing:
+#   ansible-playbook playbooks/setup-server.yml --limit testing -e "test_server_ip=X.X.X.X server_user=deploy"
+
+- name: Setup IU Alumni Server
+  hosts: all
+  become: true
+
+  vars:
+    zsh_plugins:
+      - name: zsh-autosuggestions
+        repo: https://github.com/zsh-users/zsh-autosuggestions
+      - name: zsh-syntax-highlighting
+        repo: https://github.com/zsh-users/zsh-syntax-highlighting
+
+  tasks:
+    # ── System packages ──────────────────────────────────
+    - name: Update apt cache
+      apt:
+        update_cache: yes
+        cache_valid_time: 3600
+
+    - name: Install essential packages
+      apt:
+        name:
+          - curl
+          - wget
+          - git
+          - jq
+          - tree
+          - htop
+          - ncdu
+          - tmux
+          - vim
+          - neovim
+          - unzip
+          - zip
+          - net-tools
+          - dnsutils
+          - ca-certificates
+          - gnupg
+          - lsb-release
+          - apt-transport-https
+          - software-properties-common
+          - python3-pip
+          - fail2ban
+          - ufw
+          - zsh
+        state: present
+
+    # ── Docker ───────────────────────────────────────────
+    - name: Add Docker GPG key
+      apt_key:
+        url: https://download.docker.com/linux/ubuntu/gpg
+        state: present
+
+    - name: Add Docker repository
+      apt_repository:
+        repo: "deb [arch=amd64] https://download.docker.com/linux/ubuntu {{ ansible_distribution_release }} stable"
+        state: present
+
+    - name: Install Docker
+      apt:
+        name:
+          - docker-ce
+          - docker-ce-cli
+          - containerd.io
+          - docker-compose-plugin
+        state: present
+        update_cache: yes
+
+    - name: Start and enable Docker
+      systemd:
+        name: docker
+        state: started
+        enabled: yes
+
+    - name: Add deploy user to docker group
+      user:
+        name: "{{ ansible_user }}"
+        groups: docker
+        append: yes
+
+    - name: Initialize Docker Swarm
+      command: docker swarm init
+      register: swarm_result
+      failed_when: false
+      changed_when: "'Swarm initialized' in swarm_result.stdout"
+
+    # ── Zsh + Oh My Zsh ─────────────────────────────────
+    - name: Install Oh My Zsh for deploy user
+      become_user: "{{ ansible_user }}"
+      shell: |
+        if [ ! -d "$HOME/.oh-my-zsh" ]; then
+          sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended
+        fi
+      args:
+        creates: "/home/{{ ansible_user }}/.oh-my-zsh"
+
+    - name: Clone Zsh plugins
+      become_user: "{{ ansible_user }}"
+      git:
+        repo: "{{ item.repo }}"
+        dest: "/home/{{ ansible_user }}/.oh-my-zsh/custom/plugins/{{ item.name }}"
+        version: master
+      loop: "{{ zsh_plugins }}"
+
+    - name: Configure .zshrc
+      become_user: "{{ ansible_user }}"
+      copy:
+        dest: "/home/{{ ansible_user }}/.zshrc"
+        content: |
+          export ZSH="$HOME/.oh-my-zsh"
+          ZSH_THEME="robbyrussell"
+          plugins=(git docker docker-compose zsh-autosuggestions zsh-syntax-highlighting)
+          source $ZSH/oh-my-zsh.sh
+
+          # Aliases
+          alias ll='ls -alh'
+          alias dc='docker compose'
+          alias ds='docker stack'
+          alias dps='docker ps --format "table {{.ID}}\t{{.Names}}\t{{.Status}}\t{{.Ports}}"'
+          alias dlogs='docker service logs --follow --tail 100'
+
+    - name: Set Zsh as default shell for deploy user
+      user:
+        name: "{{ ansible_user }}"
+        shell: /usr/bin/zsh
+
+    # ── Firewall (UFW) ──────────────────────────────────
+    - name: Set UFW default policy (deny incoming)
+      ufw:
+        direction: incoming
+        policy: deny
+
+    - name: Set UFW default policy (allow outgoing)
+      ufw:
+        direction: outgoing
+        policy: allow
+
+    - name: Allow SSH
+      ufw:
+        rule: allow
+        port: "22"
+        proto: tcp
+
+    - name: Allow HTTP
+      ufw:
+        rule: allow
+        port: "80"
+        proto: tcp
+
+    - name: Allow HTTPS
+      ufw:
+        rule: allow
+        port: "443"
+        proto: tcp
+
+    - name: Allow Docker Swarm ports
+      ufw:
+        rule: allow
+        port: "{{ item }}"
+        proto: tcp
+      loop:
+        - "2377"  # Swarm management
+        - "7946"  # Node communication
+      when: false  # Enable if using multi-node swarm
+
+    - name: Enable UFW
+      ufw:
+        state: enabled
+
+    # ── Fail2ban ─────────────────────────────────────────
+    - name: Configure Fail2ban for SSH
+      copy:
+        dest: /etc/fail2ban/jail.local
+        content: |
+          [sshd]
+          enabled = true
+          port = ssh
+          filter = sshd
+          maxretry = 5
+          bantime = 3600
+          findtime = 600
+      notify: restart fail2ban
+
+    - name: Start and enable Fail2ban
+      systemd:
+        name: fail2ban
+        state: started
+        enabled: yes
+
+    # ── Deploy directory ─────────────────────────────────
+    - name: Create deploy directory
+      file:
+        path: "{{ deploy_dir }}"
+        state: directory
+        owner: "{{ ansible_user }}"
+        group: "{{ ansible_user }}"
+        mode: "0755"
+
+    - name: Create data directories
+      file:
+        path: "{{ deploy_dir }}/{{ item }}"
+        state: directory
+        owner: "{{ ansible_user }}"
+        group: "{{ ansible_user }}"
+        mode: "0755"
+      loop:
+        - data
+        - data/postgres
+        - data/minio
+        - nginx
+        - nginx/conf.d
+        - nginx/certbot/conf
+        - nginx/certbot/www
+        - loki
+        - promtail
+
+    # ── Login to GHCR ────────────────────────────────────
+    - name: Log in to GitHub Container Registry
+      become_user: "{{ ansible_user }}"
+      shell: echo "{{ ghcr_token }}" | docker login ghcr.io -u {{ ghcr_user }} --password-stdin
+      when: ghcr_token is defined and ghcr_user is defined
+      no_log: true
+
+  handlers:
+    - name: restart fail2ban
+      systemd:
+        name: fail2ban
+        state: restarted

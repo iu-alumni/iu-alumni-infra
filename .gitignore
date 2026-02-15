@@ -1,0 +1,4 @@
+.env
+*.retry
+nginx/conf.d/
+docker/.env

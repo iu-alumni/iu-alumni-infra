@@ -1,0 +1,25 @@
+# ─────────────────────────────────────────────────────────────
+# Initial nginx config - HTTP only, for obtaining SSL certificates.
+#
+# Usage:
+#   1. Replace ${DOMAIN} and deploy this config
+#   2. Run: docker exec $(docker ps -q -f name=iu_alumni_certbot) \
+#        certbot certonly --webroot -w /var/www/certbot \
+#        -d ${DOMAIN} --email your@email.com --agree-tos --no-eff-email
+#   3. Replace with app.conf (the full HTTPS config)
+#   4. Reload nginx: docker exec $(docker ps -q -f name=iu_alumni_nginx) nginx -s reload
+# ─────────────────────────────────────────────────────────────
+
+server {
+    listen 80;
+    server_name ${DOMAIN};
+
+    location /.well-known/acme-challenge/ {
+        root /var/www/certbot;
+    }
+
+    location / {
+        return 200 'IU Alumni - SSL setup in progress';
+        add_header Content-Type text/plain;
+    }
+}

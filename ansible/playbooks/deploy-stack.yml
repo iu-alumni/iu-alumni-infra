@@ -1,0 +1,70 @@
+---
+# Deploy the Docker stack to a server.
+# Usage:
+#   ansible-playbook playbooks/deploy-stack.yml --limit testing -e "test_server_ip=X.X.X.X server_user=deploy"
+#   ansible-playbook playbooks/deploy-stack.yml --limit production -e "prod_server_ip=X.X.X.X server_user=deploy"
+
+- name: Deploy IU Alumni Stack
+  hosts: all
+  become: true
+
+  vars:
+    deploy_dir: /home/deploy/iu-alumni
+
+  tasks:
+    - name: Sync stack configuration files
+      synchronize:
+        src: "{{ playbook_dir }}/../../docker/"
+        dest: "{{ deploy_dir }}/docker/"
+        delete: yes
+      become_user: "{{ ansible_user }}"
+
+    - name: Sync nginx configs
+      synchronize:
+        src: "{{ playbook_dir }}/../../nginx/"
+        dest: "{{ deploy_dir }}/nginx/"
+        delete: no
+      become_user: "{{ ansible_user }}"
+
+    - name: Sync Loki config
+      synchronize:
+        src: "{{ playbook_dir }}/../../loki/"
+        dest: "{{ deploy_dir }}/loki/"
+      become_user: "{{ ansible_user }}"
+
+    - name: Sync Promtail config
+      synchronize:
+        src: "{{ playbook_dir }}/../../promtail/"
+        dest: "{{ deploy_dir }}/promtail/"
+      become_user: "{{ ansible_user }}"
+
+    - name: Sync deploy scripts
+      synchronize:
+        src: "{{ playbook_dir }}/../../scripts/"
+        dest: "{{ deploy_dir }}/scripts/"
+      become_user: "{{ ansible_user }}"
+
+    - name: Make scripts executable
+      file:
+        path: "{{ deploy_dir }}/scripts/deploy.sh"
+        mode: "0755"
+
+    - name: Make init-databases executable
+      file:
+        path: "{{ deploy_dir }}/docker/init-databases.sh"
+        mode: "0755"
+
+    - name: Generate nginx config from template
+      shell: |
+        sed 's/${DOMAIN}/{{ domain }}/g' \
+          {{ deploy_dir }}/nginx/app.conf.template \
+          > {{ deploy_dir }}/nginx/conf.d/app.conf
+      become_user: "{{ ansible_user }}"
+
+    - name: Deploy Docker stack
+      shell: |
+        cd {{ deploy_dir }} && \
+        docker stack deploy -c docker/stack.yml iu_alumni
+      become_user: "{{ ansible_user }}"
+      environment:
+        PATH: "/usr/local/bin:/usr/bin:/bin"
