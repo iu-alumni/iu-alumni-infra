@@ -22,6 +22,7 @@
         mode: "0755"
 
     - name: Clone or update infra repo
+      become: true
       become_user: "{{ ansible_user }}"
       ansible.builtin.git:
         repo: "{{ repo_url }}"
@@ -86,8 +87,9 @@
     - name: Deploy Docker stack
       become: true
       become_user: "{{ ansible_user }}"
-      ansible.builtin.command:
-        cmd: "{{ deploy_dir }}/scripts/deploy.sh deploy"
+      ansible.builtin.shell: |
+        cd {{ deploy_dir }} && \
+        docker stack deploy -c infra/docker/stack.yml iu_alumni
       environment:
         PATH: "/usr/local/bin:/usr/bin:/bin"
       changed_when: true
