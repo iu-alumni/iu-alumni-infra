@@ -12,6 +12,23 @@
     deploy_dir: /home/deploy/iu-alumni
 
   tasks:
+    - name: Ensure deploy directories exist
+      file:
+        path: "{{ item }}"
+        state: directory
+        owner: "{{ ansible_user }}"
+        group: "{{ ansible_user }}"
+        mode: "0755"
+      loop:
+        - "{{ deploy_dir }}"
+        - "{{ deploy_dir }}/nginx/conf.d"
+        - "{{ deploy_dir }}/nginx/certbot/conf"
+        - "{{ deploy_dir }}/nginx/certbot/www"
+        - "{{ deploy_dir }}/data/postgres"
+        - "{{ deploy_dir }}/data/minio"
+        - "{{ deploy_dir }}/loki"
+        - "{{ deploy_dir }}/promtail"
+
     - name: Sync stack configuration files
       synchronize:
         src: "{{ playbook_dir }}/../../docker/"
