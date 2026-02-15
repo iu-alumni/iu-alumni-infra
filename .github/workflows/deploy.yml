@@ -9,7 +9,6 @@ on:
       - 'loki/**'
       - 'promtail/**'
       - 'scripts/**'
-      - 'ansible/**'
 
 jobs:
   deploy-testing:
@@ -17,83 +16,55 @@ jobs:
     runs-on: ubuntu-latest
     environment: testing
     steps:
-      - uses: actions/checkout@v4
+      - name: Deploy to testing server
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.TEST_SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          script: |
+            set -e
+            DEPLOY_DIR="/home/deploy/iu-alumni"
+            REPO_URL="${{ github.server_url }}/${{ github.repository }}.git"
 
-      - name: Install Ansible and rsync
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y ansible
+            # Clone or pull the infra repo
+            if [ -d "$DEPLOY_DIR/infra/.git" ]; then
+              cd "$DEPLOY_DIR/infra" && git fetch origin && git reset --hard origin/develop
+            else
+              mkdir -p "$DEPLOY_DIR"
+              git clone -b develop "$REPO_URL" "$DEPLOY_DIR/infra"
+            fi
 
-      - name: Write SSH key
-        run: |
-          mkdir -p ~/.ssh
-          echo "${{ secrets.SERVER_SSH_KEY }}" > ~/.ssh/deploy_key
-          chmod 600 ~/.ssh/deploy_key
-          ssh-keyscan -H ${{ secrets.TEST_SERVER_HOST }} >> ~/.ssh/known_hosts 2>/dev/null
-
-      - name: Setup server
-        working-directory: ansible
-        env:
-          ANSIBLE_HOST_KEY_CHECKING: "false"
-        run: |
-          ansible-playbook playbooks/setup-server.yml \
-            --limit testing \
-            -e "test_server_ip=${{ secrets.TEST_SERVER_HOST }}" \
-            -e "server_user=${{ secrets.SERVER_USER }}" \
-            -e "ghcr_user=${{ github.actor }}" \
-            -e "ghcr_token=${{ secrets.GITHUB_TOKEN }}" \
-            --private-key ~/.ssh/deploy_key
-
-      - name: Deploy stack
-        working-directory: ansible
-        env:
-          ANSIBLE_HOST_KEY_CHECKING: "false"
-        run: |
-          ansible-playbook playbooks/deploy-stack.yml \
-            --limit testing \
-            -e "test_server_ip=${{ secrets.TEST_SERVER_HOST }}" \
-            -e "server_user=${{ secrets.SERVER_USER }}" \
-            --private-key ~/.ssh/deploy_key
+            # Run deploy
+            cd "$DEPLOY_DIR"
+            chmod +x infra/scripts/deploy.sh
+            ./infra/scripts/deploy.sh deploy
 
   deploy-production:
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     environment: production
     steps:
-      - uses: actions/checkout@v4
+      - name: Deploy to production server
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.PROD_SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          script: |
+            set -e
+            DEPLOY_DIR="/home/deploy/iu-alumni"
+            REPO_URL="${{ github.server_url }}/${{ github.repository }}.git"
 
-      - name: Install Ansible and rsync
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y ansible
+            # Clone or pull the infra repo
+            if [ -d "$DEPLOY_DIR/infra/.git" ]; then
+              cd "$DEPLOY_DIR/infra" && git fetch origin && git reset --hard origin/main
+            else
+              mkdir -p "$DEPLOY_DIR"
+              git clone -b main "$REPO_URL" "$DEPLOY_DIR/infra"
+            fi
 
-      - name: Write SSH key
-        run: |
-          mkdir -p ~/.ssh
-          echo "${{ secrets.SERVER_SSH_KEY }}" > ~/.ssh/deploy_key
-          chmod 600 ~/.ssh/deploy_key
-          ssh-keyscan -H ${{ secrets.PROD_SERVER_HOST }} >> ~/.ssh/known_hosts 2>/dev/null
-
-      - name: Setup server
-        working-directory: ansible
-        env:
-          ANSIBLE_HOST_KEY_CHECKING: "false"
-        run: |
-          ansible-playbook playbooks/setup-server.yml \
-            --limit production \
-            -e "prod_server_ip=${{ secrets.PROD_SERVER_HOST }}" \
-            -e "server_user=${{ secrets.SERVER_USER }}" \
-            -e "ghcr_user=${{ github.actor }}" \
-            -e "ghcr_token=${{ secrets.GITHUB_TOKEN }}" \
-            --private-key ~/.ssh/deploy_key
-
-      - name: Deploy stack
-        working-directory: ansible
-        env:
-          ANSIBLE_HOST_KEY_CHECKING: "false"
-        run: |
-          ansible-playbook playbooks/deploy-stack.yml \
-            --limit production \
-            -e "prod_server_ip=${{ secrets.PROD_SERVER_HOST }}" \
-            -e "server_user=${{ secrets.SERVER_USER }}" \
-            --private-key ~/.ssh/deploy_key
+            # Run deploy
+            cd "$DEPLOY_DIR"
+            chmod +x infra/scripts/deploy.sh
+            ./infra/scripts/deploy.sh deploy

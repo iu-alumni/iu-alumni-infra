@@ -1,0 +1,88 @@
+name: Setup Server
+
+# Only run manually or when ansible provisioning files change
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Target environment'
+        required: true
+        type: choice
+        options:
+          - testing
+          - production
+  push:
+    branches: [main, develop]
+    paths:
+      - 'ansible/playbooks/setup-server.yml'
+      - 'ansible/inventory.yml'
+      - 'ansible/ansible.cfg'
+
+jobs:
+  setup-testing:
+    if: >
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'testing') ||
+      (github.event_name == 'push' && github.ref == 'refs/heads/develop')
+    runs-on: ubuntu-latest
+    environment: testing
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Ansible
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ansible
+
+      - name: Write SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SERVER_SSH_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H ${{ secrets.TEST_SERVER_HOST }} >> ~/.ssh/known_hosts 2>/dev/null
+
+      - name: Run setup-server playbook
+        working-directory: ansible
+        env:
+          ANSIBLE_HOST_KEY_CHECKING: "false"
+        run: |
+          ansible-playbook playbooks/setup-server.yml \
+            --limit testing \
+            -e "test_server_ip=${{ secrets.TEST_SERVER_HOST }}" \
+            -e "server_user=${{ secrets.SERVER_USER }}" \
+            -e "ghcr_user=${{ github.actor }}" \
+            -e "ghcr_token=${{ secrets.GITHUB_TOKEN }}" \
+            --private-key ~/.ssh/deploy_key
+
+  setup-production:
+    if: >
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'production') ||
+      (github.event_name == 'push' && github.ref == 'refs/heads/main')
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Ansible
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ansible
+
+      - name: Write SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SERVER_SSH_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H ${{ secrets.PROD_SERVER_HOST }} >> ~/.ssh/known_hosts 2>/dev/null
+
+      - name: Run setup-server playbook
+        working-directory: ansible
+        env:
+          ANSIBLE_HOST_KEY_CHECKING: "false"
+        run: |
+          ansible-playbook playbooks/setup-server.yml \
+            --limit production \
+            -e "prod_server_ip=${{ secrets.PROD_SERVER_HOST }}" \
+            -e "server_user=${{ secrets.SERVER_USER }}" \
+            -e "ghcr_user=${{ github.actor }}" \
+            -e "ghcr_token=${{ secrets.GITHUB_TOKEN }}" \
+            --private-key ~/.ssh/deploy_key
