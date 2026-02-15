@@ -31,7 +31,20 @@ jobs:
           chmod 600 ~/.ssh/deploy_key
           ssh-keyscan -H ${{ secrets.TEST_SERVER_HOST }} >> ~/.ssh/known_hosts 2>/dev/null
 
-      - name: Run deploy playbook
+      - name: Setup server
+        working-directory: ansible
+        env:
+          ANSIBLE_HOST_KEY_CHECKING: "false"
+        run: |
+          ansible-playbook playbooks/setup-server.yml \
+            --limit testing \
+            -e "test_server_ip=${{ secrets.TEST_SERVER_HOST }}" \
+            -e "server_user=${{ secrets.SERVER_USER }}" \
+            -e "ghcr_user=${{ github.actor }}" \
+            -e "ghcr_token=${{ secrets.GITHUB_TOKEN }}" \
+            --private-key ~/.ssh/deploy_key
+
+      - name: Deploy stack
         working-directory: ansible
         env:
           ANSIBLE_HOST_KEY_CHECKING: "false"
@@ -61,7 +74,20 @@ jobs:
           chmod 600 ~/.ssh/deploy_key
           ssh-keyscan -H ${{ secrets.PROD_SERVER_HOST }} >> ~/.ssh/known_hosts 2>/dev/null
 
-      - name: Run deploy playbook
+      - name: Setup server
+        working-directory: ansible
+        env:
+          ANSIBLE_HOST_KEY_CHECKING: "false"
+        run: |
+          ansible-playbook playbooks/setup-server.yml \
+            --limit production \
+            -e "prod_server_ip=${{ secrets.PROD_SERVER_HOST }}" \
+            -e "server_user=${{ secrets.SERVER_USER }}" \
+            -e "ghcr_user=${{ github.actor }}" \
+            -e "ghcr_token=${{ secrets.GITHUB_TOKEN }}" \
+            --private-key ~/.ssh/deploy_key
+
+      - name: Deploy stack
         working-directory: ansible
         env:
           ANSIBLE_HOST_KEY_CHECKING: "false"
