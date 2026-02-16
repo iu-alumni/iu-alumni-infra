@@ -3,16 +3,17 @@
 #
 # Usage:
 #   1. Replace ${DOMAIN} and deploy this config
-#   2. Run: docker exec $(docker ps -q -f name=iu_alumni_certbot) \
+#   2. Run: docker exec $(docker ps -q -f name=iu_alumni_infra_certbot) \
 #        certbot certonly --webroot -w /var/www/certbot \
-#        -d ${DOMAIN} --email your@email.com --agree-tos --no-eff-email
+#        -d ${DOMAIN} -d minio.${DOMAIN} \
+#        --email your@email.com --agree-tos --no-eff-email
 #   3. Replace with app.conf (the full HTTPS config)
-#   4. Reload nginx: docker exec $(docker ps -q -f name=iu_alumni_nginx) nginx -s reload
+#   4. Reload nginx: docker exec $(docker ps -q -f name=iu_alumni_infra_nginx) nginx -s reload
 # ─────────────────────────────────────────────────────────────
 
 server {
     listen 80;
-    server_name ${DOMAIN};
+    server_name ${DOMAIN} minio.${DOMAIN};
 
     location /.well-known/acme-challenge/ {
         root /var/www/certbot;

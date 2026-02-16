@@ -8,7 +8,7 @@ set -euo pipefail
 
 DEPLOY_DIR="/home/deploy/iu-alumni"
 INFRA_DIR="${DEPLOY_DIR}/infra"
-STACK_NAME="iu_alumni"
+STACK_NAME="iu_alumni_infra"
 
 cd "$DEPLOY_DIR"
 
@@ -60,7 +60,7 @@ case "${1:-deploy}" in
     echo "=== Requesting SSL certificate ==="
     docker exec "$(docker ps -q -f name=${STACK_NAME}_certbot)" \
       certbot certonly --webroot -w /var/www/certbot \
-      -d "$DOMAIN" --email "$EMAIL" --agree-tos --no-eff-email
+      -d "$DOMAIN" -d "minio.$DOMAIN" --email "$EMAIL" --agree-tos --no-eff-email
 
     echo "=== Switching to full HTTPS config ==="
     sed "s/\${DOMAIN}/$DOMAIN/g" "${INFRA_DIR}/nginx/app.conf.template" > "${DEPLOY_DIR}/nginx/conf.d/app.conf"

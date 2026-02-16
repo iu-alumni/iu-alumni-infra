@@ -86,45 +86,6 @@ server {
     #     proxy_set_header X-Forwarded-Proto $scheme;
     # }
 
-    # ── Bot (Express.js) ──────────────────────────────
-    # Uncomment when bot is deployed
-    # location /bot/ {
-    #     set $upstream_bot bot;
-    #     rewrite ^/bot/(.*) /$1 break;
-    #     proxy_pass http://$upstream_bot:3001;
-    #     proxy_http_version 1.1;
-    #     proxy_set_header Host $host;
-    #     proxy_set_header X-Real-IP $remote_addr;
-    #     proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-    #     proxy_set_header X-Forwarded-Proto $scheme;
-    # }
-
-    # ── MinIO Console ─────────────────────────────────
-    location /minio/ {
-        set $upstream_minio_console minio;
-        rewrite ^/minio/(.*) /$1 break;
-        proxy_pass http://$upstream_minio_console:9001;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection "upgrade";
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-    }
-
-    # ── MinIO S3 API ──────────────────────────────────
-    location /s3/ {
-        set $upstream_minio_s3 minio;
-        rewrite ^/s3/(.*) /$1 break;
-        proxy_pass http://$upstream_minio_s3:9000;
-        proxy_http_version 1.1;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-    }
-
     # ── Portainer ─────────────────────────────────────
     location /portainer/ {
         set $upstream_portainer portainer;

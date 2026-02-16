@@ -13,58 +13,24 @@ on:
 jobs:
   deploy-testing:
     if: github.ref == 'refs/heads/develop'
-    runs-on: ubuntu-latest
-    environment: testing
-    steps:
-      - name: Deploy to testing server
-        uses: appleboy/ssh-action@v1
-        with:
-          host: ${{ secrets.TEST_SERVER_HOST }}
-          username: ${{ secrets.SERVER_USER }}
-          key: ${{ secrets.SERVER_SSH_KEY }}
-          script: |
-            set -e
-            DEPLOY_DIR="/home/deploy/iu-alumni"
-            REPO_URL="${{ github.server_url }}/${{ github.repository }}.git"
-
-            # Clone or pull the infra repo
-            if [ -d "$DEPLOY_DIR/infra/.git" ]; then
-              cd "$DEPLOY_DIR/infra" && git fetch origin && git reset --hard origin/develop
-            else
-              mkdir -p "$DEPLOY_DIR"
-              git clone -b develop "$REPO_URL" "$DEPLOY_DIR/infra"
-            fi
-
-            # Run deploy
-            cd "$DEPLOY_DIR"
-            chmod +x infra/scripts/deploy.sh
-            ./infra/scripts/deploy.sh deploy
+    uses: iu-alumni/iu-alumni-infra/.github/workflows/deploy-service.yml@develop
+    with:
+      repo_dir: infra
+      branch: develop
+      environment: testing
+    secrets:
+      SERVER_HOST: ${{ secrets.TEST_SERVER_HOST }}
+      SERVER_USER: ${{ secrets.SERVER_USER }}
+      SERVER_SSH_KEY: ${{ secrets.SERVER_SSH_KEY }}
 
   deploy-production:
     if: github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
-    environment: production
-    steps:
-      - name: Deploy to production server
-        uses: appleboy/ssh-action@v1
-        with:
-          host: ${{ secrets.PROD_SERVER_HOST }}
-          username: ${{ secrets.SERVER_USER }}
-          key: ${{ secrets.SERVER_SSH_KEY }}
-          script: |
-            set -e
-            DEPLOY_DIR="/home/deploy/iu-alumni"
-            REPO_URL="${{ github.server_url }}/${{ github.repository }}.git"
-
-            # Clone or pull the infra repo
-            if [ -d "$DEPLOY_DIR/infra/.git" ]; then
-              cd "$DEPLOY_DIR/infra" && git fetch origin && git reset --hard origin/main
-            else
-              mkdir -p "$DEPLOY_DIR"
-              git clone -b main "$REPO_URL" "$DEPLOY_DIR/infra"
-            fi
-
-            # Run deploy
-            cd "$DEPLOY_DIR"
-            chmod +x infra/scripts/deploy.sh
-            ./infra/scripts/deploy.sh deploy
+    uses: iu-alumni/iu-alumni-infra/.github/workflows/deploy-service.yml@main
+    with:
+      repo_dir: infra
+      branch: main
+      environment: production
+    secrets:
+      SERVER_HOST: ${{ secrets.PROD_SERVER_HOST }}
+      SERVER_USER: ${{ secrets.SERVER_USER }}
+      SERVER_SSH_KEY: ${{ secrets.SERVER_SSH_KEY }}

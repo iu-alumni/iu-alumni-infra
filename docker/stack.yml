@@ -1,13 +1,15 @@
 version: "3.8"
 
 # ─────────────────────────────────────────────────────────────
-# IU Alumni - Docker Stack (deploy with: docker stack deploy -c stack.yml iu_alumni)
+# IU Alumni - Infrastructure Stack
+# Deploy with: docker stack deploy -c stack.yml iu_alumni_infra
 #
-# Before deploying, create the required Docker secrets:
-#   echo "value" | docker secret create secret_name -
+# Before deploying, create the overlay network:
+#   docker network create --driver overlay --attachable iu_alumni_network
 #
-# And create the overlay network:
-#   docker network create --driver overlay iu_alumni_network
+# Application services (backend, frontend) are deployed
+# separately from their own repositories. They share the same
+# overlay network to communicate with these infrastructure services.
 # ─────────────────────────────────────────────────────────────
 
 services:
@@ -22,7 +24,9 @@ services:
       - /home/deploy/iu-alumni/nginx/certbot/conf:/etc/letsencrypt:ro
       - /home/deploy/iu-alumni/nginx/certbot/www:/var/www/certbot:ro
     networks:
-      - iu_alumni_network
+      iu_alumni_network:
+        aliases:
+          - nginx
     deploy:
       replicas: 1
       restart_policy:
@@ -34,84 +38,12 @@ services:
       - /home/deploy/iu-alumni/nginx/certbot/conf:/etc/letsencrypt
       - /home/deploy/iu-alumni/nginx/certbot/www:/var/www/certbot
     entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done;'"
+    networks:
+      - iu_alumni_network
     deploy:
       replicas: 1
       restart_policy:
         condition: any
-
-  # ── Frontend (Nuxt 3) ─────────────────────────────────
-  # frontend:
-  #   image: ${FRONTEND_IMAGE:-ghcr.io/iu-alumni/iu-alumni-frontend:main}
-  #   environment:
-  #     NUXT_PUBLIC_API_BASE_URL: /api
-  #   networks:
-  #     - iu_alumni_network
-  #   deploy:
-  #     replicas: 1
-  #     restart_policy:
-  #       condition: any
-
-  # ── Backend (FastAPI) ──────────────────────────────────
-  # backend:
-  #   image: ${BACKEND_IMAGE:-ghcr.io/iu-alumni/iu-alumni-backend:main}
-  #   environment:
-  #     SQLALCHEMY_DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD}@postgres:5432/${BACKEND_DB:-iu_alumni_db}
-  #     SECRET_KEY: ${SECRET_KEY}
-  #     ADMIN_EMAIL: ${ADMIN_EMAIL}
-  #     ADMIN_PASSWORD: ${ADMIN_PASSWORD}
-  #     NOTIFICATION_BOT_URL: http://bot:3001
-  #     CORS_ORIGINS: ${CORS_ORIGINS:-https://alumap-prod.escalopa.com}
-  #     MAIL_USERNAME: ${MAIL_USERNAME:-}
-  #     MAIL_PASSWORD: ${MAIL_PASSWORD:-}
-  #     MAIL_PORT: ${MAIL_PORT:-587}
-  #     MAIL_SERVER: ${MAIL_SERVER:-smtp.gmail.com}
-  #     MAIL_FROM: ${MAIL_FROM:-noreply@innopolis.university}
-  #     MAIL_FROM_NAME: ${MAIL_FROM_NAME:-IU Alumni}
-  #     EMAIL_HASH_SECRET: ${EMAIL_HASH_SECRET}
-  #     ENVIRONMENT: ${ENVIRONMENT:-PROD}
-  #   command: >
-  #     sh -c "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8080"
-  #   networks:
-  #     - iu_alumni_network
-  #   deploy:
-  #     replicas: 1
-  #     restart_policy:
-  #       condition: any
-
-  # ── Scheduler (event reminders) ────────────────────────
-  # scheduler:
-  #   image: ${BACKEND_IMAGE:-ghcr.io/iu-alumni/iu-alumni-backend:main}
-  #   environment:
-  #     SQLALCHEMY_DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD}@postgres:5432/${BACKEND_DB:-iu_alumni_db}
-  #     NOTIFICATION_BOT_URL: http://bot:3001
-  #   command: >
-  #     sh -c "while true; do
-  #       echo 'Running event reminders at' $$(date);
-  #       python scripts/send_event_reminders.py;
-  #       sleep 3600;
-  #     done"
-  #   networks:
-  #     - iu_alumni_network
-  #   deploy:
-  #     replicas: 1
-  #     restart_policy:
-  #       condition: any
-
-  # ── Bot (Express.js) ──────────────────────────────────
-  # bot:
-  #   image: ${BOT_IMAGE:-ghcr.io/iu-alumni/iu-alumni-bot:main}
-  #   environment:
-  #     DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD}@postgres:5432/${BOT_DB:-bot_db}
-  #     TELEGRAM_TOKEN: ${TELEGRAM_TOKEN}
-  #     ADMIN_CHAT_ID: ${ADMIN_CHAT_ID:--4725261280}
-  #     MINI_APP_URL: ${MINI_APP_URL:-https://alumap-prod.escalopa.com}
-  #     PORT: 3001
-  #   networks:
-  #     - iu_alumni_network
-  #   deploy:
-  #     replicas: 1
-  #     restart_policy:
-  #       condition: any
 
   # ── PostgreSQL ─────────────────────────────────────────
   postgres:
@@ -123,7 +55,9 @@ services:
       - /home/deploy/iu-alumni/data/postgres:/var/lib/postgresql/data
       - /home/deploy/iu-alumni/infra/docker/init-databases.sh:/docker-entrypoint-initdb.d/init-databases.sh:ro
     networks:
-      - iu_alumni_network
+      iu_alumni_network:
+        aliases:
+          - postgres
     deploy:
       replicas: 1
       restart_policy:
@@ -133,17 +67,21 @@ services:
           - node.role == manager
 
   # ── MinIO (object storage) ─────────────────────────────
+  # Served via subdomain: minio.${DOMAIN}
+  # Port 9000 handles both S3 API and Console (auto-detected by request type)
   minio:
     image: minio/minio:latest
-    command: server /data --console-address ":9001"
+    command: server /data
     environment:
       MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
-      MINIO_BROWSER_REDIRECT_URL: https://${DOMAIN}/minio/
+      MINIO_SERVER_URL: https://minio.${DOMAIN}
     volumes:
       - /home/deploy/iu-alumni/data/minio:/data
     networks:
-      - iu_alumni_network
+      iu_alumni_network:
+        aliases:
+          - minio
     deploy:
       replicas: 1
       restart_policy:
@@ -172,7 +110,9 @@ services:
       - /home/deploy/iu-alumni/infra/loki/loki-config.yml:/etc/loki/loki-config.yml:ro
       - loki_data:/loki
     networks:
-      - iu_alumni_network
+      iu_alumni_network:
+        aliases:
+          - loki
     deploy:
       replicas: 1
       restart_policy:
@@ -212,8 +152,7 @@ services:
 
 networks:
   iu_alumni_network:
-    driver: overlay
-    attachable: true
+    external: true
 
 volumes:
   portainer_data:
