@@ -30,6 +30,11 @@ variable "testing_postgres_password" {
   sensitive = true
 }
 
+variable "testing_postgres_user" {
+  type    = string
+  default = "postgres"
+}
+
 variable "testing_backend_db" {
   type = string
   default = "alumni_db"
@@ -114,6 +119,11 @@ variable "production_certbot_email" { type = string }
 variable "production_postgres_password" {
   type = string
   sensitive = true
+}
+
+variable "production_postgres_user" {
+  type    = string
+  default = "postgres"
 }
 
 variable "production_backend_db" {
