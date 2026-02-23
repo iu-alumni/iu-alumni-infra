@@ -223,8 +223,6 @@
         - nginx/conf.d
         - nginx/certbot/conf
         - nginx/certbot/www
-        - loki
-        - promtail
         - prometheus
         - grafana/provisioning/datasources
 

@@ -113,51 +113,6 @@ services:
         constraints:
           - node.role == manager
 
-  # ── Loki (log aggregation) ─────────────────────────────
-  loki:
-    image: grafana/loki:3.0.0
-    command: -config.file=/etc/loki/loki-config.yml
-    volumes:
-      - ${DEPLOY_DIR:-/home/deploy/iu-alumni}/infra/loki/loki-config.yml:/etc/loki/loki-config.yml:ro
-      - loki_data:/loki
-    networks:
-      iu_alumni_network:
-        aliases:
-          - loki
-    deploy:
-      replicas: 1
-      restart_policy:
-        condition: any
-      resources:
-        limits:
-          cpus: "0.5"
-          memory: 512M
-        reservations:
-          cpus: "0.1"
-          memory: 128M
-
-  # ── Promtail (log shipper) ─────────────────────────────
-  promtail:
-    image: grafana/promtail:3.0.0
-    command: -config.file=/etc/promtail/promtail-config.yml
-    volumes:
-      - ${DEPLOY_DIR:-/home/deploy/iu-alumni}/infra/promtail/promtail-config.yml:/etc/promtail/promtail-config.yml:ro
-      - /var/log:/var/log:ro
-      - /var/lib/docker/containers:/var/lib/docker/containers:ro
-    networks:
-      - iu_alumni_network
-    deploy:
-      mode: global
-      restart_policy:
-        condition: any
-      resources:
-        limits:
-          cpus: "0.25"
-          memory: 128M
-        reservations:
-          cpus: "0.05"
-          memory: 32M
-
   # ── Grafana (dashboards) ───────────────────────────────
   # Accessible at grafana.${DOMAIN}
   grafana:
@@ -215,38 +170,6 @@ services:
         constraints:
           - node.role == manager
 
-  # ── cAdvisor (container metrics) ──────────────────────
-  # Runs on every node; scrape target for Prometheus at :8080
-  cadvisor:
-    image: gcr.io/cadvisor/cadvisor:v0.49.1
-    cap_add:
-      - SYS_ADMIN
-      - SYS_RESOURCE
-    command:
-      - '--housekeeping_interval=30s'
-      - '--docker_only=true'
-    volumes:
-      - /:/rootfs:ro
-      - /var/run:/var/run:rw
-      - /sys:/sys:ro
-      - /var/lib/docker:/var/lib/docker:ro
-      - /sys/fs/cgroup:/sys/fs/cgroup:ro
-    networks:
-      iu_alumni_network:
-        aliases:
-          - cadvisor
-    deploy:
-      mode: global
-      restart_policy:
-        condition: any
-      resources:
-        limits:
-          cpus: "0.25"
-          memory: 256M
-        reservations:
-          cpus: "0.05"
-          memory: 64M
-
   # ── Node Exporter (host metrics) ──────────────────────
   # Runs on every node; scrape target for Prometheus at :9100
   node-exporter:
@@ -300,6 +223,5 @@ networks:
 
 volumes:
   portainer_data:
-  loki_data:
   grafana_data:
   prometheus_data:

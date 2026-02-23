@@ -16,7 +16,7 @@ nginx (ports 80/443)
   └── grafana.{DOMAIN}       → grafana:3000     (Dashboards)
 
 Internal only (no public route):
-  postgres:5432   loki:3100   promtail
+  postgres:5432   prometheus
 ```
 
 All services share a Docker Swarm overlay network (`iu_alumni_network`).
