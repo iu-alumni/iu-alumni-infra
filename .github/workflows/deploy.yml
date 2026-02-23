@@ -2,7 +2,17 @@ name: Deploy Infrastructure
 
 on:
   push:
-    branches: [main, develop]
+    branches: [main]
+    paths:
+      - 'docker/**'
+      - 'nginx/**'
+      - 'loki/**'
+      - 'promtail/**'
+      - 'prometheus/**'
+      - 'grafana/**'
+      - 'scripts/**'
+  pull_request:
+    branches: [main]
     paths:
       - 'docker/**'
       - 'nginx/**'
@@ -14,11 +24,11 @@ on:
 
 jobs:
   deploy-testing:
-    if: github.ref == 'refs/heads/develop'
-    uses: iu-alumni/iu-alumni-infra/.github/workflows/deploy-service.yml@develop
+    if: github.event_name == 'pull_request'
+    uses: iu-alumni/iu-alumni-infra/.github/workflows/deploy-service.yml@main
     with:
       repo_dir: infra
-      branch: develop
+      branch: main
       environment: testing
     secrets:
       SERVER_HOST: ${{ secrets.SERVER_HOST }}
@@ -26,7 +36,7 @@ jobs:
       SERVER_SSH_KEY: ${{ secrets.SERVER_SSH_KEY }}
 
   deploy-production:
-    if: github.ref == 'refs/heads/main'
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     uses: iu-alumni/iu-alumni-infra/.github/workflows/deploy-service.yml@main
     with:
       repo_dir: infra

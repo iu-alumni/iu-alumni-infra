@@ -12,7 +12,7 @@ on:
           - testing
           - production
   push:
-    branches: [main, develop]
+    branches: [main]
     paths:
       - 'ansible/playbooks/setup-server.yml'
       - 'ansible/inventory.yml'
@@ -20,9 +20,7 @@ on:
 
 jobs:
   setup-testing:
-    if: >
-      (github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'testing') ||
-      (github.event_name == 'push' && github.ref == 'refs/heads/develop')
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'testing'
     runs-on: ubuntu-latest
     environment: testing
     steps:
