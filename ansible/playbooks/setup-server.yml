@@ -1,0 +1,259 @@
+---
+# Set up a server with all required tools (idempotent - safe to re-run).
+# Usage:
+#   ansible-playbook playbooks/setup-server.yml --limit testing -e "server_ip=X.X.X.X server_user=deploy"
+#
+# To run on production:
+#   ansible-playbook playbooks/setup-server.yml --limit production -e "server_ip=Y.Y.Y.Y server_user=deploy"
+
+- name: Setup IU Alumni Server
+  hosts: all
+  become: true
+
+  vars:
+    zsh_plugins:
+      - name: zsh-autosuggestions
+        repo: https://github.com/zsh-users/zsh-autosuggestions
+      - name: zsh-syntax-highlighting
+        repo: https://github.com/zsh-users/zsh-syntax-highlighting
+
+  tasks:
+    # ── System packages ──────────────────────────────────
+    - name: Update apt cache
+      ansible.builtin.apt:
+        update_cache: true
+        cache_valid_time: 3600
+
+    - name: Install essential packages
+      ansible.builtin.apt:
+        name:
+          - curl
+          - wget
+          - git
+          - jq
+          - tree
+          - htop
+          - ncdu
+          - tmux
+          - vim
+          - neovim
+          - unzip
+          - zip
+          - net-tools
+          - dnsutils
+          - ca-certificates
+          - gnupg
+          - lsb-release
+          - apt-transport-https
+          - software-properties-common
+          - python3-pip
+          - fail2ban
+          - ufw
+          - zsh
+        state: present
+
+    # ── Docker ───────────────────────────────────────────
+    - name: Create Docker keyring directory
+      ansible.builtin.file:
+        path: /etc/apt/keyrings
+        state: directory
+        mode: "0755"
+
+    - name: Download Docker GPG key
+      ansible.builtin.get_url:
+        url: https://download.docker.com/linux/ubuntu/gpg
+        dest: /etc/apt/keyrings/docker.asc
+        mode: "0644"
+        force: false
+
+    - name: Add Docker repository
+      ansible.builtin.apt_repository:
+        repo: >-
+          deb [arch=amd64 signed-by=/etc/apt/keyrings/docker.asc]
+          https://download.docker.com/linux/ubuntu
+          {{ ansible_facts['distribution_release'] }} stable
+        state: present
+
+    - name: Install Docker
+      ansible.builtin.apt:
+        name:
+          - docker-ce
+          - docker-ce-cli
+          - containerd.io
+          - docker-compose-plugin
+        state: present
+        update_cache: true
+
+    - name: Start and enable Docker
+      ansible.builtin.systemd:
+        name: docker
+        state: started
+        enabled: true
+
+    - name: Add deploy user to docker group
+      ansible.builtin.user:
+        name: "{{ ansible_user }}"
+        groups: docker
+        append: true
+
+    - name: Check if Docker Swarm is active
+      ansible.builtin.command: docker info --format {% raw %}'{{.Swarm.LocalNodeState}}'{% endraw %}
+      register: swarm_state
+      changed_when: false
+
+    - name: Initialize Docker Swarm
+      ansible.builtin.command: docker swarm init
+      when: swarm_state.stdout != "active"
+      changed_when: true
+
+    - name: Create overlay network
+      ansible.builtin.command: docker network create --driver overlay --attachable iu_alumni_network
+      register: network_result
+      failed_when: false
+      changed_when: network_result.rc == 0
+
+    # ── Zsh + Oh My Zsh ─────────────────────────────────
+    - name: Install Oh My Zsh for deploy user
+      become: true
+      become_user: "{{ ansible_user }}"
+      ansible.builtin.shell: |
+        sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended
+      args:
+        creates: "/home/{{ ansible_user }}/.oh-my-zsh"
+
+    - name: Clone Zsh plugins
+      become: true
+      become_user: "{{ ansible_user }}"
+      ansible.builtin.git:
+        repo: "{{ item.repo }}"
+        dest: "/home/{{ ansible_user }}/.oh-my-zsh/custom/plugins/{{ item.name }}"
+        version: master
+      loop: "{{ zsh_plugins }}"
+
+    - name: Configure zshrc
+      become: true
+      become_user: "{{ ansible_user }}"
+      ansible.builtin.template:
+        src: zshrc.j2
+        dest: "/home/{{ ansible_user }}/.zshrc"
+        mode: "0644"
+
+    - name: Set Zsh as default shell for deploy user
+      ansible.builtin.user:
+        name: "{{ ansible_user }}"
+        shell: /usr/bin/zsh
+
+    # ── Firewall (UFW) ──────────────────────────────────
+    - name: Set UFW default policy (deny incoming)
+      community.general.ufw:
+        direction: incoming
+        policy: deny
+
+    - name: Set UFW default policy (allow outgoing)
+      community.general.ufw:
+        direction: outgoing
+        policy: allow
+
+    - name: Allow SSH
+      community.general.ufw:
+        rule: allow
+        port: "22"
+        proto: tcp
+
+    - name: Allow HTTP
+      community.general.ufw:
+        rule: allow
+        port: "80"
+        proto: tcp
+
+    - name: Allow HTTPS
+      community.general.ufw:
+        rule: allow
+        port: "443"
+        proto: tcp
+
+    - name: Allow Docker Swarm ports
+      community.general.ufw:
+        rule: allow
+        port: "{{ item }}"
+        proto: tcp
+      loop:
+        - "2377"  # Swarm management
+        - "7946"  # Node communication
+      when: false  # Enable if using multi-node swarm
+
+    - name: Enable UFW
+      community.general.ufw:
+        state: enabled
+
+    # ── Fail2ban ─────────────────────────────────────────
+    - name: Configure Fail2ban for SSH
+      ansible.builtin.copy:
+        dest: /etc/fail2ban/jail.local
+        mode: "0644"
+        content: |
+          [sshd]
+          enabled = true
+          port = ssh
+          filter = sshd
+          maxretry = 5
+          bantime = 3600
+          findtime = 600
+      notify: Restart fail2ban
+
+    - name: Start and enable Fail2ban
+      ansible.builtin.systemd:
+        name: fail2ban
+        state: started
+        enabled: true
+
+    # ── Deploy directory ─────────────────────────────────
+    - name: Create deploy directories
+      ansible.builtin.file:
+        path: "{{ deploy_dir }}/{{ item }}"
+        state: directory
+        owner: "{{ ansible_user }}"
+        group: "{{ ansible_user }}"
+        mode: "0755"
+      loop:
+        - ""
+        - data
+        - data/postgres
+        - data/minio
+        - nginx
+        - nginx/conf.d
+        - nginx/certbot/conf
+        - nginx/certbot/www
+        - loki
+        - promtail
+        - prometheus
+        - grafana/provisioning/datasources
+
+    # ── Environment file ─────────────────────────────────
+    - name: Write .env file from secrets
+      ansible.builtin.template:
+        src: templates/env.j2
+        dest: "{{ deploy_dir }}/.env"
+        owner: "{{ ansible_user }}"
+        group: "{{ ansible_user }}"
+        mode: "0600"
+      no_log: true
+
+    # ── Login to GHCR ────────────────────────────────────
+    - name: Log in to GitHub Container Registry
+      become: true
+      become_user: "{{ ansible_user }}"
+      ansible.builtin.shell:
+        cmd: |
+          set -o pipefail
+          echo "{{ ghcr_token }}" | docker login ghcr.io -u {{ ghcr_user }} --password-stdin
+        executable: /bin/bash
+      when: ghcr_token is defined and ghcr_user is defined
+      no_log: true
+      changed_when: true
+
+  handlers:
+    - name: Restart fail2ban
+      ansible.builtin.systemd:
+        name: fail2ban
+        state: restarted

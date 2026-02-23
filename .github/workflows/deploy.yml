@@ -1,0 +1,36 @@
+name: Deploy Infrastructure
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - 'docker/**'
+      - 'nginx/**'
+      - 'loki/**'
+      - 'promtail/**'
+      - 'scripts/**'
+
+jobs:
+  deploy-testing:
+    if: github.ref == 'refs/heads/develop'
+    uses: iu-alumni/iu-alumni-infra/.github/workflows/deploy-service.yml@develop
+    with:
+      repo_dir: infra
+      branch: develop
+      environment: testing
+    secrets:
+      SERVER_HOST: ${{ secrets.SERVER_HOST }}
+      SERVER_USER: ${{ secrets.SERVER_USER }}
+      SERVER_SSH_KEY: ${{ secrets.SERVER_SSH_KEY }}
+
+  deploy-production:
+    if: github.ref == 'refs/heads/main'
+    uses: iu-alumni/iu-alumni-infra/.github/workflows/deploy-service.yml@main
+    with:
+      repo_dir: infra
+      branch: main
+      environment: production
+    secrets:
+      SERVER_HOST: ${{ secrets.SERVER_HOST }}
+      SERVER_USER: ${{ secrets.SERVER_USER }}
+      SERVER_SSH_KEY: ${{ secrets.SERVER_SSH_KEY }}

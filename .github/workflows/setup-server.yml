@@ -1,0 +1,172 @@
+name: Setup Server
+
+# Only run manually or when ansible provisioning files change
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Target environment'
+        required: true
+        type: choice
+        options:
+          - testing
+          - production
+  push:
+    branches: [main, develop]
+    paths:
+      - 'ansible/playbooks/setup-server.yml'
+      - 'ansible/inventory.yml'
+      - 'ansible/ansible.cfg'
+
+jobs:
+  setup-testing:
+    if: >
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'testing') ||
+      (github.event_name == 'push' && github.ref == 'refs/heads/develop')
+    runs-on: ubuntu-latest
+    environment: testing
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Ansible
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ansible
+
+      - name: Write SSH key
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "${{ secrets.SERVER_SSH_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H "${{ secrets.SERVER_HOST }}" >> ~/.ssh/known_hosts 2>/dev/null || true
+
+      - name: Run setup-server playbook
+        working-directory: ansible
+        env:
+          ANSIBLE_HOST_KEY_CHECKING: "false"
+        run: |
+          ansible-playbook playbooks/setup-server.yml \
+            --limit testing \
+            -e "server_ip=${{ secrets.SERVER_HOST }}" \
+            -e "server_user=${{ secrets.SERVER_USER }}" \
+            -e "ghcr_user=${{ github.actor }}" \
+            -e "ghcr_token=${{ secrets.GITHUB_TOKEN }}" \
+            -e "domain=${{ secrets.DOMAIN }}" \
+            -e "certbot_email=${{ secrets.CERTBOT_EMAIL }}" \
+            -e "postgres_password=${{ secrets.POSTGRES_PASSWORD }}" \
+            -e "backend_db=${{ secrets.BACKEND_DB }}" \
+            -e "secret_key=${{ secrets.SECRET_KEY }}" \
+            -e "admin_email=${{ secrets.ADMIN_EMAIL }}" \
+            -e "admin_password=${{ secrets.ADMIN_PASSWORD }}" \
+            -e "email_hash_secret=${{ secrets.EMAIL_HASH_SECRET }}" \
+            -e "mail_username=${{ secrets.MAIL_USERNAME }}" \
+            -e "mail_password=${{ secrets.MAIL_PASSWORD }}" \
+            -e "mail_from=${{ secrets.MAIL_FROM }}" \
+            -e "mail_server=${{ secrets.MAIL_SERVER }}" \
+            -e "mail_port=${{ secrets.MAIL_PORT }}" \
+            -e "telegram_token=${{ secrets.TELEGRAM_TOKEN }}" \
+            -e "admin_chat_id=${{ secrets.ADMIN_CHAT_ID }}" \
+            -e "minio_root_user=${{ secrets.MINIO_ROOT_USER }}" \
+            -e "minio_root_password=${{ secrets.MINIO_ROOT_PASSWORD }}" \
+            -e "grafana_user=${{ secrets.GRAFANA_USER }}" \
+            -e "grafana_password=${{ secrets.GRAFANA_PASSWORD }}" \
+            --private-key ~/.ssh/deploy_key
+
+      # After server is provisioned, bootstrap the infrastructure stack.
+      # deploy.sh will detect missing SSL certs and run certbot automatically.
+      - name: Bootstrap infrastructure (first deploy + SSL)
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          script: |
+            set -e
+            DEPLOY_DIR="${DEPLOY_DIR:-/home/deploy/iu-alumni}"
+            if [ -f "$DEPLOY_DIR/.env" ]; then set -a && . "$DEPLOY_DIR/.env" && set +a; fi
+
+            REPO_DIR="$DEPLOY_DIR/infra"
+            if [ -d "$REPO_DIR/.git" ]; then
+              cd "$REPO_DIR" && git fetch origin && git reset --hard origin/develop
+            else
+              git clone -b develop \
+                https://github.com/${{ github.repository }}.git "$REPO_DIR"
+            fi
+
+            chmod +x "$REPO_DIR/scripts/deploy.sh"
+            DEPLOY_DIR="$DEPLOY_DIR" "$REPO_DIR/scripts/deploy.sh" deploy
+
+  setup-production:
+    if: >
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'production') ||
+      (github.event_name == 'push' && github.ref == 'refs/heads/main')
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Ansible
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ansible
+
+      - name: Write SSH key
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "${{ secrets.SERVER_SSH_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H "${{ secrets.SERVER_HOST }}" >> ~/.ssh/known_hosts 2>/dev/null || true
+
+      - name: Run setup-server playbook
+        working-directory: ansible
+        env:
+          ANSIBLE_HOST_KEY_CHECKING: "false"
+        run: |
+          ansible-playbook playbooks/setup-server.yml \
+            --limit production \
+            -e "server_ip=${{ secrets.SERVER_HOST }}" \
+            -e "server_user=${{ secrets.SERVER_USER }}" \
+            -e "ghcr_user=${{ github.actor }}" \
+            -e "ghcr_token=${{ secrets.GITHUB_TOKEN }}" \
+            -e "domain=${{ secrets.DOMAIN }}" \
+            -e "certbot_email=${{ secrets.CERTBOT_EMAIL }}" \
+            -e "postgres_password=${{ secrets.POSTGRES_PASSWORD }}" \
+            -e "backend_db=${{ secrets.BACKEND_DB }}" \
+            -e "secret_key=${{ secrets.SECRET_KEY }}" \
+            -e "admin_email=${{ secrets.ADMIN_EMAIL }}" \
+            -e "admin_password=${{ secrets.ADMIN_PASSWORD }}" \
+            -e "email_hash_secret=${{ secrets.EMAIL_HASH_SECRET }}" \
+            -e "mail_username=${{ secrets.MAIL_USERNAME }}" \
+            -e "mail_password=${{ secrets.MAIL_PASSWORD }}" \
+            -e "mail_from=${{ secrets.MAIL_FROM }}" \
+            -e "mail_server=${{ secrets.MAIL_SERVER }}" \
+            -e "mail_port=${{ secrets.MAIL_PORT }}" \
+            -e "telegram_token=${{ secrets.TELEGRAM_TOKEN }}" \
+            -e "admin_chat_id=${{ secrets.ADMIN_CHAT_ID }}" \
+            -e "minio_root_user=${{ secrets.MINIO_ROOT_USER }}" \
+            -e "minio_root_password=${{ secrets.MINIO_ROOT_PASSWORD }}" \
+            -e "grafana_user=${{ secrets.GRAFANA_USER }}" \
+            -e "grafana_password=${{ secrets.GRAFANA_PASSWORD }}" \
+            --private-key ~/.ssh/deploy_key
+
+      - name: Bootstrap infrastructure (first deploy + SSL)
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          script: |
+            set -e
+            DEPLOY_DIR="${DEPLOY_DIR:-/home/deploy/iu-alumni}"
+            if [ -f "$DEPLOY_DIR/.env" ]; then set -a && . "$DEPLOY_DIR/.env" && set +a; fi
+
+            REPO_DIR="$DEPLOY_DIR/infra"
+            if [ -d "$REPO_DIR/.git" ]; then
+              cd "$REPO_DIR" && git fetch origin && git reset --hard origin/main
+            else
+              git clone -b main \
+                https://github.com/${{ github.repository }}.git "$REPO_DIR"
+            fi
+
+            chmod +x "$REPO_DIR/scripts/deploy.sh"
+            DEPLOY_DIR="$DEPLOY_DIR" "$REPO_DIR/scripts/deploy.sh" deploy

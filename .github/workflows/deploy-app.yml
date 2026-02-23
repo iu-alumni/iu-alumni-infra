@@ -1,0 +1,79 @@
+name: Deploy App Service
+
+# Reusable workflow for deploying any app service (backend, frontend, mobile)
+# to Docker Swarm via SSH.
+#
+# Callers provide the repo name, stack name, image variable name, and image tag.
+# The workflow SSHes to the server, loads the shared .env, clones/updates the
+# repo, and runs docker stack deploy with the new image.
+
+on:
+  workflow_call:
+    inputs:
+      repo_name:
+        description: "Repo directory name on the server (e.g. iu-alumni-backend)"
+        type: string
+        required: true
+      stack_name:
+        description: "Docker Swarm stack name (e.g. iu_alumni_backend)"
+        type: string
+        required: true
+      image_var:
+        description: "Env var name for the image in docker-stack.yml (e.g. BACKEND_IMAGE)"
+        type: string
+        required: true
+      image_tag:
+        description: "Full image:tag to deploy (e.g. ghcr.io/org/repo:sha)"
+        type: string
+        required: true
+      branch:
+        description: "Branch to deploy (develop or main)"
+        type: string
+        required: true
+      environment:
+        description: "Deployment environment (testing or production)"
+        type: string
+        required: true
+    secrets:
+      SERVER_HOST:
+        required: true
+      SERVER_USER:
+        required: true
+      SERVER_SSH_KEY:
+        required: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    steps:
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          script: |
+            set -e
+            DEPLOY_DIR="${DEPLOY_DIR:-/home/deploy/iu-alumni}"
+
+            # Load shared env (domain, DB creds, secrets, etc.)
+            if [ -f "$DEPLOY_DIR/.env" ]; then set -a && . "$DEPLOY_DIR/.env" && set +a; fi
+
+            REPO_DIR="$DEPLOY_DIR/${{ inputs.repo_name }}"
+            REPO_URL="https://github.com/${{ github.repository }}.git"
+
+            # Clone or update the repo so docker-stack.yml is up to date
+            if [ -d "$REPO_DIR/.git" ]; then
+              cd "$REPO_DIR" && git fetch origin && git reset --hard origin/${{ inputs.branch }}
+            else
+              git clone -b ${{ inputs.branch }} "$REPO_URL" "$REPO_DIR"
+            fi
+
+            # Deploy the Swarm stack, overriding the image with the just-built tag
+            ${{ inputs.image_var }}="${{ inputs.image_tag }}" \
+            DEPLOY_DIR="$DEPLOY_DIR" \
+              docker stack deploy \
+                --with-registry-auth \
+                -c "$REPO_DIR/docker-stack.yml" \
+                ${{ inputs.stack_name }}

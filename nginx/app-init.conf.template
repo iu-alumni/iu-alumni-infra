@@ -1,0 +1,22 @@
+# ─────────────────────────────────────────────────────────────
+# Initial nginx config - HTTP only, used during SSL certificate
+# bootstrapping so certbot can complete the ACME challenge.
+#
+# Covers all public subdomains in one server block.
+# deploy.sh replaces this with the full HTTPS configs after
+# certificates are issued.
+# ─────────────────────────────────────────────────────────────
+
+server {
+    listen 80;
+    server_name ${DOMAIN} api.${DOMAIN} mobile.${DOMAIN} portainer.${DOMAIN} grafana.${DOMAIN};
+
+    location /.well-known/acme-challenge/ {
+        root /var/www/certbot;
+    }
+
+    location / {
+        return 200 'IU Alumni - SSL setup in progress';
+        add_header Content-Type text/plain;
+    }
+}
