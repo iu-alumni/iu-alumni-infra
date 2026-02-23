@@ -8,6 +8,8 @@ on:
       - 'nginx/**'
       - 'loki/**'
       - 'promtail/**'
+      - 'prometheus/**'
+      - 'grafana/**'
       - 'scripts/**'
 
 jobs:
