@@ -8,7 +8,6 @@
 #
 # Then run individual apps in their own repos:
 #   cd ../iu-alumni-backend && docker compose up
-#   cd ../iu-alumni-bot && docker compose up
 #   cd ../iu-alumni-frontend && pnpm dev
 # ─────────────────────────────────────────────────────────────
 
