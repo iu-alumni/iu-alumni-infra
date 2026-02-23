@@ -248,7 +248,6 @@ services:
     command:
       - '--housekeeping_interval=30s'
       - '--docker_only=true'
-      - '--disable_metrics=percpu,sched,tcp,udp,diskIO,disk,network'
     volumes:
       - /:/rootfs:ro
       - /var/run/docker.sock:/var/run/docker.sock:ro
