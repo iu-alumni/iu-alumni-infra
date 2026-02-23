@@ -1,11 +1,22 @@
 # ── Repository definitions ───────────────────────────────────────────────────
 
+# ── Repository definitions ───────────────────────────────────────────────────
+
 locals {
   repos = {
     backend  = "iu-alumni-backend"
     frontend = "iu-alumni-frontend"
     mobile   = "iu-alumni-mobile"
     infra    = "iu-alumni-infra"
+  }
+
+  # CI check names (job names) that must pass before merging.
+  # These match the job IDs in each repo's deploy.yml workflow.
+  required_checks = {
+    backend  = ["build-image", "deploy-testing"]
+    frontend = ["build-image", "deploy-testing"]
+    mobile   = ["build-testing", "deploy-testing"]
+    infra    = ["deploy-testing"]
   }
 }
 
@@ -60,8 +71,8 @@ resource "github_branch_protection" "main" {
   pattern       = "main"
 
   required_status_checks {
-    strict   = true   # require branch to be up-to-date before merge
-    contexts = []     # add CI check names here when ready (e.g. "build", "test")
+    strict   = true
+    contexts = local.required_checks[each.key]
   }
 
   required_pull_request_reviews {
