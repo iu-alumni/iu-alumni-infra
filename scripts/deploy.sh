@@ -54,13 +54,6 @@ generate_nginx_config() {
     log "Nginx configs generated for domain: $DOMAIN"
 }
 
-sync_config_files() {
-    mkdir -p "$DEPLOY_DIR/infra"
-    cp -r "$REPO_DIR/loki" "$REPO_DIR/promtail" "$REPO_DIR/docker" \
-          "$REPO_DIR/prometheus" "$REPO_DIR/grafana" "$DEPLOY_DIR/infra/"
-    log "Config files synced to $DEPLOY_DIR/infra"
-}
-
 # ── SSL bootstrap ────────────────────────────────────────────────────────────
 
 init_ssl() {
@@ -113,7 +106,6 @@ init_ssl() {
 
 deploy() {
     ensure_network
-    sync_config_files
 
     if [ ! -d "$CERT_DIR" ]; then
         log "No SSL certificates found — running SSL init first..."
