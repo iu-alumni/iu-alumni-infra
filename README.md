@@ -25,9 +25,9 @@ nginx resolves service names via Docker DNS at request time — it starts even i
 ## Environments
 
 | Environment | Branch  | GitHub Environment |
-|-------------|---------|-------------------|
-| Testing     | develop | `testing`         |
-| Production  | main    | `production`      |
+|-------------|---------|--------------------|
+| Testing     | develop | `testing`          |
+| Production  | main    | `production`       |
 
 ---
 
