@@ -122,8 +122,7 @@ variable "production_postgres_password" {
 }
 
 variable "production_postgres_user" {
-  type    = string
-  default = "postgres"
+  type = string
 }
 
 variable "production_backend_db" {
