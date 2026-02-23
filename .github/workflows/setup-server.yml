@@ -123,7 +123,6 @@ jobs:
             --limit production \
             -e "server_ip=${{ secrets.SERVER_HOST }}" \
             -e "server_user=${{ secrets.SERVER_USER }}" \
-            -e "ghcr_user=${{ github.actor }}" \
             -e "domain=${{ secrets.DOMAIN }}" \
             -e "certbot_email=${{ secrets.CERTBOT_EMAIL }}" \
             -e "postgres_password=${{ secrets.POSTGRES_PASSWORD }}" \
