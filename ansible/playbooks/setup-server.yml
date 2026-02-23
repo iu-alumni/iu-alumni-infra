@@ -219,7 +219,6 @@
         - ""
         - data
         - data/postgres
-        - data/minio
         - nginx
         - nginx/conf.d
         - nginx/certbot/conf

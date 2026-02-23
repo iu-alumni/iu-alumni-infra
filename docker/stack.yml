@@ -87,32 +87,6 @@ services:
         constraints:
           - node.role == manager
 
-  # ── MinIO (object storage - internal only) ────────────
-  # Accessible only within the swarm network (no public nginx route).
-  # Backend connects to minio:9000 for S3 operations.
-  minio:
-    image: minio/minio:latest
-    command: server /data
-    environment:
-      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
-      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
-    volumes:
-      - ${DEPLOY_DIR:-/home/deploy/iu-alumni}/data/minio:/data
-    networks:
-      iu_alumni_network:
-        aliases:
-          - minio
-    deploy:
-      replicas: 1
-      restart_policy:
-        condition: any
-      resources:
-        limits:
-          cpus: "1.0"
-          memory: 512M
-        reservations:
-          cpus: "0.1"
-          memory: 128M
 
   # ── Portainer (Docker management) ─────────────────────
   # Accessible at portainer.${DOMAIN}

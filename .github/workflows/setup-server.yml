@@ -64,14 +64,10 @@ jobs:
             -e "mail_port=${{ secrets.MAIL_PORT }}" \
             -e "telegram_token=${{ secrets.TELEGRAM_TOKEN }}" \
             -e "admin_chat_id=${{ secrets.ADMIN_CHAT_ID }}" \
-            -e "minio_root_user=${{ secrets.MINIO_ROOT_USER }}" \
-            -e "minio_root_password=${{ secrets.MINIO_ROOT_PASSWORD }}" \
             -e "grafana_user=${{ secrets.GRAFANA_USER }}" \
             -e "grafana_password=${{ secrets.GRAFANA_PASSWORD }}" \
             --private-key ~/.ssh/deploy_key
 
-      # After server is provisioned, bootstrap the infrastructure stack.
-      # deploy.sh will detect missing SSL certs and run certbot automatically.
       - name: Bootstrap infrastructure (first deploy + SSL)
         uses: appleboy/ssh-action@v1
         with:
@@ -140,8 +136,6 @@ jobs:
             -e "mail_port=${{ secrets.MAIL_PORT }}" \
             -e "telegram_token=${{ secrets.TELEGRAM_TOKEN }}" \
             -e "admin_chat_id=${{ secrets.ADMIN_CHAT_ID }}" \
-            -e "minio_root_user=${{ secrets.MINIO_ROOT_USER }}" \
-            -e "minio_root_password=${{ secrets.MINIO_ROOT_PASSWORD }}" \
             -e "grafana_user=${{ secrets.GRAFANA_USER }}" \
             -e "grafana_password=${{ secrets.GRAFANA_PASSWORD }}" \
             --private-key ~/.ssh/deploy_key
