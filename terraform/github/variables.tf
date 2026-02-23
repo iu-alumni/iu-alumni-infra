@@ -30,6 +30,11 @@ variable "testing_postgres_password" {
   sensitive = true
 }
 
+variable "testing_postgres_user" {
+  type    = string
+  default = "postgres"
+}
+
 variable "testing_backend_db" {
   type = string
   default = "alumni_db"
@@ -74,15 +79,6 @@ variable "testing_telegram_token" {
 }
 
 variable "testing_admin_chat_id" { type = string }
-variable "testing_minio_root_user" {
-  type = string
-  default = "minioadmin"
-}
-
-variable "testing_minio_root_password" {
-  type = string
-  sensitive = true
-}
 
 variable "testing_grafana_user" {
   type = string
@@ -114,6 +110,10 @@ variable "production_certbot_email" { type = string }
 variable "production_postgres_password" {
   type = string
   sensitive = true
+}
+
+variable "production_postgres_user" {
+  type = string
 }
 
 variable "production_backend_db" {
@@ -160,15 +160,6 @@ variable "production_telegram_token" {
 }
 
 variable "production_admin_chat_id" { type = string }
-variable "production_minio_root_user" {
-  type = string
-  default = "minioadmin"
-}
-
-variable "production_minio_root_password" {
-  type = string
-  sensitive = true
-}
 
 variable "production_grafana_user" {
   type = string

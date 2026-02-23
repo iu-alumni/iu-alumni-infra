@@ -98,6 +98,7 @@ locals {
     DOMAIN                = var.testing_domain
     CERTBOT_EMAIL         = var.testing_certbot_email
     POSTGRES_PASSWORD     = var.testing_postgres_password
+    POSTGRES_USER         = var.testing_postgres_user
     BACKEND_DB            = var.testing_backend_db
     SECRET_KEY            = var.testing_secret_key
     ADMIN_EMAIL           = var.testing_admin_email
@@ -110,8 +111,6 @@ locals {
     MAIL_PORT             = var.testing_mail_port
     TELEGRAM_TOKEN        = var.testing_telegram_token
     ADMIN_CHAT_ID         = var.testing_admin_chat_id
-    MINIO_ROOT_USER       = var.testing_minio_root_user
-    MINIO_ROOT_PASSWORD   = var.testing_minio_root_password
     GRAFANA_USER          = var.testing_grafana_user
     GRAFANA_PASSWORD      = var.testing_grafana_password
   }
@@ -120,6 +119,7 @@ locals {
     DOMAIN                = var.production_domain
     CERTBOT_EMAIL         = var.production_certbot_email
     POSTGRES_PASSWORD     = var.production_postgres_password
+    POSTGRES_USER         = var.production_postgres_user
     BACKEND_DB            = var.production_backend_db
     SECRET_KEY            = var.production_secret_key
     ADMIN_EMAIL           = var.production_admin_email
@@ -132,8 +132,6 @@ locals {
     MAIL_PORT             = var.production_mail_port
     TELEGRAM_TOKEN        = var.production_telegram_token
     ADMIN_CHAT_ID         = var.production_admin_chat_id
-    MINIO_ROOT_USER       = var.production_minio_root_user
-    MINIO_ROOT_PASSWORD   = var.production_minio_root_password
     GRAFANA_USER          = var.production_grafana_user
     GRAFANA_PASSWORD      = var.production_grafana_password
   }

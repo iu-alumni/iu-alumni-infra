@@ -16,7 +16,7 @@ nginx (ports 80/443)
   └── grafana.{DOMAIN}       → grafana:3000     (Dashboards)
 
 Internal only (no public route):
-  postgres:5432   minio:9000/9001   loki:3100   promtail
+  postgres:5432   prometheus
 ```
 
 All services share a Docker Swarm overlay network (`iu_alumni_network`).
@@ -69,7 +69,7 @@ This workflow will:
 3. Clone the infra repo on the server and run `deploy.sh`:
    - Creates the `iu_alumni_network` overlay network
    - Generates nginx configs from templates
-   - Deploys the infra stack (nginx, postgres, minio, portainer, grafana, loki, prometheus)
+   - Deploys the infra stack (nginx, postgres, portainer, grafana, loki, prometheus)
    - Bootstraps SSL certificates via Let's Encrypt (auto-detected on first run)
 
 ### Step 3 — Deploy application services
@@ -143,7 +143,7 @@ Written to the server's `.env` by Ansible — no manual file editing needed.
 | `DOMAIN` | Base domain, no scheme (e.g. `alumni.example.com`) |
 | `CERTBOT_EMAIL` | Email for Let's Encrypt notifications |
 | `POSTGRES_PASSWORD` | PostgreSQL superuser password |
-| `BACKEND_DB` | Database name (default: `alumni_db`) |
+| `BACKEND_DB` | Database name (default: `iu_alumni_db`) |
 | `SECRET_KEY` | JWT signing secret |
 | `ADMIN_EMAIL` | Initial admin account email |
 | `ADMIN_PASSWORD` | Initial admin account password |
@@ -155,8 +155,6 @@ Written to the server's `.env` by Ansible — no manual file editing needed.
 | `MAIL_PORT` | SMTP port (default: `587`) |
 | `TELEGRAM_TOKEN` | Telegram bot token |
 | `ADMIN_CHAT_ID` | Telegram admin group chat ID |
-| `MINIO_ROOT_USER` | MinIO admin username |
-| `MINIO_ROOT_PASSWORD` | MinIO admin password |
 | `GRAFANA_USER` | Grafana admin username |
 | `GRAFANA_PASSWORD` | Grafana admin password |
 
@@ -170,7 +168,7 @@ Written to the server's `.env` by Ansible — no manual file editing needed.
 
 ## Local Development
 
-Start shared services (PostgreSQL + MinIO):
+Start shared services (PostgreSQL):
 
 ```bash
 cd docker
