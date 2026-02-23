@@ -77,23 +77,4 @@ resource "github_branch_protection" "main" {
   require_conversation_resolution = true
 }
 
-# ── Branch protection — develop ──────────────────────────────────────────────
 
-resource "github_branch_protection" "develop" {
-  for_each = local.repos
-
-  repository_id = github_repository.repos[each.key].node_id
-  pattern       = "develop"
-
-  required_pull_request_reviews {
-    required_approving_review_count  = 0
-    dismiss_stale_reviews            = true
-    require_code_owner_reviews       = false
-    require_last_push_approval       = false
-  }
-
-  enforce_admins                  = false
-  allows_deletions                = false
-  allows_force_pushes             = false
-  require_conversation_resolution = false
-}
