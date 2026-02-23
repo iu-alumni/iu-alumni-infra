@@ -12,7 +12,7 @@ on:
           - testing
           - production
   push:
-    branches: [main, develop]
+    branches: [main]
     paths:
       - 'ansible/playbooks/setup-server.yml'
       - 'ansible/inventory.yml'
@@ -20,9 +20,7 @@ on:
 
 jobs:
   setup-testing:
-    if: >
-      (github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'testing') ||
-      (github.event_name == 'push' && github.ref == 'refs/heads/develop')
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'testing'
     runs-on: ubuntu-latest
     environment: testing
     steps:
@@ -50,7 +48,6 @@ jobs:
             -e "server_ip=${{ secrets.SERVER_HOST }}" \
             -e "server_user=${{ secrets.SERVER_USER }}" \
             -e "ghcr_user=${{ github.actor }}" \
-            -e "ghcr_token=${{ secrets.GITHUB_TOKEN }}" \
             -e "domain=${{ secrets.DOMAIN }}" \
             -e "certbot_email=${{ secrets.CERTBOT_EMAIL }}" \
             -e "postgres_password=${{ secrets.POSTGRES_PASSWORD }}" \
@@ -126,8 +123,6 @@ jobs:
             --limit production \
             -e "server_ip=${{ secrets.SERVER_HOST }}" \
             -e "server_user=${{ secrets.SERVER_USER }}" \
-            -e "ghcr_user=${{ github.actor }}" \
-            -e "ghcr_token=${{ secrets.GITHUB_TOKEN }}" \
             -e "domain=${{ secrets.DOMAIN }}" \
             -e "certbot_email=${{ secrets.CERTBOT_EMAIL }}" \
             -e "postgres_password=${{ secrets.POSTGRES_PASSWORD }}" \
