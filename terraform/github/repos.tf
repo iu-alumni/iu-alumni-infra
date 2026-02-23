@@ -6,7 +6,6 @@ locals {
     frontend = "iu-alumni-frontend"
     mobile   = "iu-alumni-mobile"
     infra    = "iu-alumni-infra"
-    bot      = "iu-alumni-bot"
   }
 }
 
@@ -28,11 +27,6 @@ import {
   to = github_repository.repos["infra"]
   id = "iu-alumni-infra"
 }
-import {
-  to = github_repository.repos["bot"]
-  id = "iu-alumni-bot"
-}
-
 # Common settings applied to every repo
 resource "github_repository" "repos" {
   for_each = local.repos
