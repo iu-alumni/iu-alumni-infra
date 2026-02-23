@@ -1,10 +1,10 @@
 ---
 # Set up a server with all required tools (idempotent - safe to re-run).
 # Usage:
-#   ansible-playbook playbooks/setup-server.yml -e "test_server_ip=X.X.X.X prod_server_ip=Y.Y.Y.Y server_user=deploy"
+#   ansible-playbook playbooks/setup-server.yml --limit testing -e "server_ip=X.X.X.X server_user=deploy"
 #
-# To run only on testing:
-#   ansible-playbook playbooks/setup-server.yml --limit testing -e "test_server_ip=X.X.X.X server_user=deploy"
+# To run on production:
+#   ansible-playbook playbooks/setup-server.yml --limit production -e "server_ip=Y.Y.Y.Y server_user=deploy"
 
 - name: Setup IU Alumni Server
   hosts: all
@@ -226,6 +226,18 @@
         - nginx/certbot/www
         - loki
         - promtail
+        - prometheus
+        - grafana/provisioning/datasources
+
+    # ── Environment file ─────────────────────────────────
+    - name: Write .env file from secrets
+      ansible.builtin.template:
+        src: templates/env.j2
+        dest: "{{ deploy_dir }}/.env"
+        owner: "{{ ansible_user }}"
+        group: "{{ ansible_user }}"
+        mode: "0600"
+      no_log: true
 
     # ── Login to GHCR ────────────────────────────────────
     - name: Log in to GitHub Container Registry

@@ -1,17 +1,23 @@
+# ─────────────────────────────────────────────────────────────
+# Ansible inventory - all host details come from CI/CD secrets.
+#
+# The actual host IP and user are passed as extra vars (-e) by
+# the setup-server.yml workflow. Nothing here needs to change
+# when migrating to a new server — just update GitHub secrets:
+#   SERVER_HOST (per environment), SERVER_USER
+# ─────────────────────────────────────────────────────────────
 all:
   children:
     testing:
       hosts:
         test-server:
-          ansible_host: "{{ test_server_ip }}"
+          ansible_host: "{{ server_ip }}"
           ansible_user: "{{ server_user }}"
-          domain: alumap-test.escalopa.com
     production:
       hosts:
         prod-server:
-          ansible_host: "{{ prod_server_ip }}"
+          ansible_host: "{{ server_ip }}"
           ansible_user: "{{ server_user }}"
-          domain: alumap-prod.escalopa.com
   vars:
     ansible_python_interpreter: /usr/bin/python3
-    deploy_dir: /home/deploy/iu-alumni
+    deploy_dir: /home/{{ server_user }}/iu-alumni

@@ -1,0 +1,67 @@
+# Copy this to terraform.tfvars (gitignored) and fill in values.
+# Run: cp terraform.tfvars.example terraform.tfvars
+
+github_token = "ghp_..."
+github_org   = "iu-alumni"
+
+# ── Testing environment ──────────────────────────────────────────────────────
+
+testing_server_host    = "1.2.3.4"
+testing_server_user    = "deploy"
+testing_server_ssh_key = <<-EOT
+  -----BEGIN OPENSSH PRIVATE KEY-----
+  ...
+  -----END OPENSSH PRIVATE KEY-----
+EOT
+
+testing_domain            = "alumni-test.example.com"
+testing_certbot_email     = "admin@example.com"
+testing_postgres_password = "changeme"
+testing_backend_db        = "alumni_db"
+testing_secret_key        = "changeme"
+testing_admin_email       = "admin@example.com"
+testing_admin_password    = "changeme"
+testing_email_hash_secret = "changeme"
+testing_mail_username     = ""
+testing_mail_password     = ""
+testing_mail_from         = "noreply@example.com"
+testing_mail_server       = "smtp.gmail.com"
+testing_mail_port         = "587"
+testing_telegram_token    = ""
+testing_admin_chat_id     = ""
+testing_minio_root_user     = "minioadmin"
+testing_minio_root_password = "changeme"
+testing_grafana_user        = "admin"
+testing_grafana_password    = "changeme"
+testing_api_base_url        = "https://api.alumni-test.example.com"
+
+# ── Production environment ───────────────────────────────────────────────────
+
+production_server_host    = "5.6.7.8"
+production_server_user    = "deploy"
+production_server_ssh_key = <<-EOT
+  -----BEGIN OPENSSH PRIVATE KEY-----
+  ...
+  -----END OPENSSH PRIVATE KEY-----
+EOT
+
+production_domain            = "alumni.example.com"
+production_certbot_email     = "admin@example.com"
+production_postgres_password = "changeme"
+production_backend_db        = "alumni_db"
+production_secret_key        = "changeme"
+production_admin_email       = "admin@example.com"
+production_admin_password    = "changeme"
+production_email_hash_secret = "changeme"
+production_mail_username     = ""
+production_mail_password     = ""
+production_mail_from         = "noreply@example.com"
+production_mail_server       = "smtp.gmail.com"
+production_mail_port         = "587"
+production_telegram_token    = ""
+production_admin_chat_id     = ""
+production_minio_root_user     = "minioadmin"
+production_minio_root_password = "changeme"
+production_grafana_user        = "admin"
+production_grafana_password    = "changeme"
+production_api_base_url        = "https://api.alumni.example.com"

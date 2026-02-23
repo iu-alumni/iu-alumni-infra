@@ -19,7 +19,7 @@ jobs:
       branch: develop
       environment: testing
     secrets:
-      SERVER_HOST: ${{ secrets.TEST_SERVER_HOST }}
+      SERVER_HOST: ${{ secrets.SERVER_HOST }}
       SERVER_USER: ${{ secrets.SERVER_USER }}
       SERVER_SSH_KEY: ${{ secrets.SERVER_SSH_KEY }}
 
@@ -31,6 +31,6 @@ jobs:
       branch: main
       environment: production
     secrets:
-      SERVER_HOST: ${{ secrets.PROD_SERVER_HOST }}
+      SERVER_HOST: ${{ secrets.SERVER_HOST }}
       SERVER_USER: ${{ secrets.SERVER_USER }}
       SERVER_SSH_KEY: ${{ secrets.SERVER_SSH_KEY }}

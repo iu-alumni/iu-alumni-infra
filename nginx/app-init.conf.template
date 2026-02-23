@@ -1,19 +1,15 @@
 # ─────────────────────────────────────────────────────────────
-# Initial nginx config - HTTP only, for obtaining SSL certificates.
+# Initial nginx config - HTTP only, used during SSL certificate
+# bootstrapping so certbot can complete the ACME challenge.
 #
-# Usage:
-#   1. Replace ${DOMAIN} and deploy this config
-#   2. Run: docker exec $(docker ps -q -f name=iu_alumni_infra_certbot) \
-#        certbot certonly --webroot -w /var/www/certbot \
-#        -d ${DOMAIN} -d minio.${DOMAIN} \
-#        --email your@email.com --agree-tos --no-eff-email
-#   3. Replace with app.conf (the full HTTPS config)
-#   4. Reload nginx: docker exec $(docker ps -q -f name=iu_alumni_infra_nginx) nginx -s reload
+# Covers all public subdomains in one server block.
+# deploy.sh replaces this with the full HTTPS configs after
+# certificates are issued.
 # ─────────────────────────────────────────────────────────────
 
 server {
     listen 80;
-    server_name ${DOMAIN} minio.${DOMAIN};
+    server_name ${DOMAIN} api.${DOMAIN} mobile.${DOMAIN} portainer.${DOMAIN} grafana.${DOMAIN};
 
     location /.well-known/acme-challenge/ {
         root /var/www/certbot;

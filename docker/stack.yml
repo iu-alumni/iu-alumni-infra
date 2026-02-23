@@ -20,9 +20,9 @@ services:
       - "80:80"
       - "443:443"
     volumes:
-      - /home/deploy/iu-alumni/nginx/conf.d:/etc/nginx/conf.d:ro
-      - /home/deploy/iu-alumni/nginx/certbot/conf:/etc/letsencrypt:ro
-      - /home/deploy/iu-alumni/nginx/certbot/www:/var/www/certbot:ro
+      - ${DEPLOY_DIR:-/home/deploy/iu-alumni}/nginx/conf.d:/etc/nginx/conf.d:ro
+      - ${DEPLOY_DIR:-/home/deploy/iu-alumni}/nginx/certbot/conf:/etc/letsencrypt:ro
+      - ${DEPLOY_DIR:-/home/deploy/iu-alumni}/nginx/certbot/www:/var/www/certbot:ro
     networks:
       iu_alumni_network:
         aliases:
@@ -31,12 +31,19 @@ services:
       replicas: 1
       restart_policy:
         condition: any
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 256M
+        reservations:
+          cpus: "0.1"
+          memory: 64M
 
   certbot:
     image: certbot/certbot
     volumes:
-      - /home/deploy/iu-alumni/nginx/certbot/conf:/etc/letsencrypt
-      - /home/deploy/iu-alumni/nginx/certbot/www:/var/www/certbot
+      - ${DEPLOY_DIR:-/home/deploy/iu-alumni}/nginx/certbot/conf:/etc/letsencrypt
+      - ${DEPLOY_DIR:-/home/deploy/iu-alumni}/nginx/certbot/www:/var/www/certbot
     entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done;'"
     networks:
       - iu_alumni_network
@@ -44,6 +51,13 @@ services:
       replicas: 1
       restart_policy:
         condition: any
+      resources:
+        limits:
+          cpus: "0.25"
+          memory: 128M
+        reservations:
+          cpus: "0.05"
+          memory: 32M
 
   # ── PostgreSQL ─────────────────────────────────────────
   postgres:
@@ -52,8 +66,8 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     volumes:
-      - /home/deploy/iu-alumni/data/postgres:/var/lib/postgresql/data
-      - /home/deploy/iu-alumni/infra/docker/init-databases.sh:/docker-entrypoint-initdb.d/init-databases.sh:ro
+      - ${DEPLOY_DIR:-/home/deploy/iu-alumni}/data/postgres:/var/lib/postgresql/data
+      - ${DEPLOY_DIR:-/home/deploy/iu-alumni}/infra/docker/init-databases.sh:/docker-entrypoint-initdb.d/init-databases.sh:ro
     networks:
       iu_alumni_network:
         aliases:
@@ -62,22 +76,28 @@ services:
       replicas: 1
       restart_policy:
         condition: any
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 1G
+        reservations:
+          cpus: "0.25"
+          memory: 256M
       placement:
         constraints:
           - node.role == manager
 
-  # ── MinIO (object storage) ─────────────────────────────
-  # Served via subdomain: minio.${DOMAIN}
-  # Port 9000 handles both S3 API and Console (auto-detected by request type)
+  # ── MinIO (object storage - internal only) ────────────
+  # Accessible only within the swarm network (no public nginx route).
+  # Backend connects to minio:9000 for S3 operations.
   minio:
     image: minio/minio:latest
     command: server /data
     environment:
       MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
-      MINIO_SERVER_URL: https://minio.${DOMAIN}
     volumes:
-      - /home/deploy/iu-alumni/data/minio:/data
+      - ${DEPLOY_DIR:-/home/deploy/iu-alumni}/data/minio:/data
     networks:
       iu_alumni_network:
         aliases:
@@ -86,18 +106,35 @@ services:
       replicas: 1
       restart_policy:
         condition: any
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 512M
+        reservations:
+          cpus: "0.1"
+          memory: 128M
 
   # ── Portainer (Docker management) ─────────────────────
+  # Accessible at portainer.${DOMAIN}
   portainer:
     image: portainer/portainer-ce:latest
-    command: -H unix:///var/run/docker.sock --base-url /portainer
+    command: -H unix:///var/run/docker.sock
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - portainer_data:/data
     networks:
-      - iu_alumni_network
+      iu_alumni_network:
+        aliases:
+          - portainer
     deploy:
       replicas: 1
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 256M
+        reservations:
+          cpus: "0.05"
+          memory: 64M
       placement:
         constraints:
           - node.role == manager
@@ -107,7 +144,7 @@ services:
     image: grafana/loki:3.0.0
     command: -config.file=/etc/loki/loki-config.yml
     volumes:
-      - /home/deploy/iu-alumni/infra/loki/loki-config.yml:/etc/loki/loki-config.yml:ro
+      - ${DEPLOY_DIR:-/home/deploy/iu-alumni}/infra/loki/loki-config.yml:/etc/loki/loki-config.yml:ro
       - loki_data:/loki
     networks:
       iu_alumni_network:
@@ -117,13 +154,20 @@ services:
       replicas: 1
       restart_policy:
         condition: any
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 512M
+        reservations:
+          cpus: "0.1"
+          memory: 128M
 
   # ── Promtail (log shipper) ─────────────────────────────
   promtail:
     image: grafana/promtail:3.0.0
     command: -config.file=/etc/promtail/promtail-config.yml
     volumes:
-      - /home/deploy/iu-alumni/infra/promtail/promtail-config.yml:/etc/promtail/promtail-config.yml:ro
+      - ${DEPLOY_DIR:-/home/deploy/iu-alumni}/infra/promtail/promtail-config.yml:/etc/promtail/promtail-config.yml:ro
       - /var/log:/var/log:ro
       - /var/lib/docker/containers:/var/lib/docker/containers:ro
     networks:
@@ -132,23 +176,146 @@ services:
       mode: global
       restart_policy:
         condition: any
+      resources:
+        limits:
+          cpus: "0.25"
+          memory: 128M
+        reservations:
+          cpus: "0.05"
+          memory: 32M
 
   # ── Grafana (dashboards) ───────────────────────────────
+  # Accessible at grafana.${DOMAIN}
   grafana:
     image: grafana/grafana:11.0.0
     environment:
       GF_SECURITY_ADMIN_USER: ${GRAFANA_USER:-admin}
       GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD}
-      GF_SERVER_ROOT_URL: https://${DOMAIN}/grafana/
-      GF_SERVER_SERVE_FROM_SUB_PATH: "true"
+      GF_SERVER_ROOT_URL: https://grafana.${DOMAIN}/
     volumes:
       - grafana_data:/var/lib/grafana
+      - ${DEPLOY_DIR:-/home/deploy/iu-alumni}/infra/grafana/provisioning:/etc/grafana/provisioning:ro
     networks:
-      - iu_alumni_network
+      iu_alumni_network:
+        aliases:
+          - grafana
     deploy:
       replicas: 1
       restart_policy:
         condition: any
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 256M
+        reservations:
+          cpus: "0.1"
+          memory: 64M
+
+  # ── Prometheus (metrics collection) ───────────────────
+  # Internal only — scraped by Grafana
+  prometheus:
+    image: prom/prometheus:v2.52.0
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=30d'
+    volumes:
+      - ${DEPLOY_DIR:-/home/deploy/iu-alumni}/infra/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    networks:
+      iu_alumni_network:
+        aliases:
+          - prometheus
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: any
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 512M
+        reservations:
+          cpus: "0.1"
+          memory: 128M
+      placement:
+        constraints:
+          - node.role == manager
+
+  # ── cAdvisor (container metrics) ──────────────────────
+  # Runs on every node; scrape target for Prometheus at :8080
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:v0.49.1
+    command:
+      - '--housekeeping_interval=30s'
+      - '--docker_only=true'
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker:/var/lib/docker:ro
+      - /dev/disk:/dev/disk:ro
+    networks:
+      iu_alumni_network:
+        aliases:
+          - cadvisor
+    deploy:
+      mode: global
+      restart_policy:
+        condition: any
+      resources:
+        limits:
+          cpus: "0.25"
+          memory: 256M
+        reservations:
+          cpus: "0.05"
+          memory: 64M
+
+  # ── Node Exporter (host metrics) ──────────────────────
+  # Runs on every node; scrape target for Prometheus at :9100
+  node-exporter:
+    image: prom/node-exporter:v1.8.0
+    command:
+      - '--path.rootfs=/host'
+      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
+    volumes:
+      - /:/host:ro,rslave
+    networks:
+      iu_alumni_network:
+        aliases:
+          - node-exporter
+    deploy:
+      mode: global
+      restart_policy:
+        condition: any
+      resources:
+        limits:
+          cpus: "0.1"
+          memory: 64M
+        reservations:
+          cpus: "0.02"
+          memory: 32M
+
+  # ── Postgres Exporter (database metrics) ──────────────
+  # Scrape target for Prometheus at :9187
+  postgres-exporter:
+    image: prometheuscommunity/postgres-exporter:v0.15.0
+    environment:
+      DATA_SOURCE_NAME: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD}@postgres:5432/${BACKEND_DB:-alumni_db}?sslmode=disable
+    networks:
+      iu_alumni_network:
+        aliases:
+          - postgres-exporter
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: any
+      resources:
+        limits:
+          cpus: "0.1"
+          memory: 64M
+        reservations:
+          cpus: "0.02"
+          memory: 32M
 
 networks:
   iu_alumni_network:
@@ -158,3 +325,4 @@ volumes:
   portainer_data:
   loki_data:
   grafana_data:
+  prometheus_data:

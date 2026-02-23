@@ -41,9 +41,12 @@ jobs:
           key: ${{ secrets.SERVER_SSH_KEY }}
           script: |
             set -e
-            DEPLOY_DIR="/home/deploy/iu-alumni"
+            DEPLOY_DIR="${DEPLOY_DIR:-/home/deploy/iu-alumni}"
             REPO_DIR="$DEPLOY_DIR/${{ inputs.repo_dir }}"
             REPO_URL="${{ github.server_url }}/${{ github.repository }}.git"
+
+            # Load env vars (may override DEPLOY_DIR)
+            if [ -f "$DEPLOY_DIR/.env" ]; then set -a && . "$DEPLOY_DIR/.env" && set +a; fi
 
             if [ -d "$REPO_DIR/.git" ]; then
               cd "$REPO_DIR" && git fetch origin && git reset --hard origin/${{ inputs.branch }}
@@ -53,4 +56,4 @@ jobs:
             fi
 
             cd "$DEPLOY_DIR" && chmod +x "$REPO_DIR/scripts/deploy.sh"
-            IMAGE_TAG="${{ inputs.image_tag }}" "$REPO_DIR/scripts/deploy.sh" deploy
+            IMAGE_TAG="${{ inputs.image_tag }}" DEPLOY_DIR="$DEPLOY_DIR" "$REPO_DIR/scripts/deploy.sh" deploy

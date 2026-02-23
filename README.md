@@ -1,70 +1,172 @@
-# IU Alumni Infrastructure
+# IU Alumni — Deployment Guide
 
-Infrastructure configuration for the IU Alumni platform. Manages server provisioning, Docker stack deployment, nginx reverse proxy, monitoring, and CI/CD.
+This is the single source of truth for deploying the full application cluster.
 
 ## Architecture
 
-```
-nginx (80/443) ─── reverse proxy + SSL (certbot)
-├── /           → frontend:3000  (Nuxt 3 SSR)
-├── /api/       → backend:8080   (FastAPI)
-├── /bot/       → bot:3001       (Express.js - Telegram bot)
-├── /minio/     → minio:9001     (MinIO Console)
-├── /s3/        → minio:9000     (MinIO S3 API)
-├── /portainer/ → portainer:9000 (Docker management)
-└── /grafana/   → grafana:3000   (Dashboards)
+```txt
+Internet
+  │
+  ▼
+nginx (ports 80/443)
+  ├── {DOMAIN}               → frontend:3000    (Nuxt 3 SSR)
+  ├── api.{DOMAIN}           → backend:8080     (FastAPI)
+  ├── mobile.{DOMAIN}        → mobile:80        (Flutter web)
+  ├── portainer.{DOMAIN}     → portainer:9000   (Docker UI)
+  └── grafana.{DOMAIN}       → grafana:3000     (Dashboards)
 
-postgres:5432    (shared instance: iu_alumni_db + bot_db)
-loki:3100        (log aggregation)
-promtail         (log shipping from containers)
-certbot          (automatic SSL renewal)
+Internal only (no public route):
+  postgres:5432   minio:9000/9001   loki:3100   promtail
 ```
+
+All services share a Docker Swarm overlay network (`iu_alumni_network`).
+nginx resolves service names via Docker DNS at request time — it starts even if app services are not yet deployed.
 
 ## Environments
 
-| Environment | Domain | Branch |
-|-------------|--------|--------|
-| Production  | `alumap-prod.escalopa.com` | `main` |
-| Testing     | `alumap-test.escalopa.com` | `develop` |
+| Environment | Branch  | GitHub Environment |
+|-------------|---------|-------------------|
+| Testing     | develop | `testing`         |
+| Production  | main    | `production`      |
 
-## Quick Start
+---
 
-### 1. Provision servers (first time only)
+## Initial Deployment (First Time)
 
-```bash
-cd ansible
-ansible-playbook playbooks/setup-server.yml \
-  -e "test_server_ip=X.X.X.X prod_server_ip=Y.Y.Y.Y server_user=deploy"
-```
+### Prerequisites
 
-### 2. Configure environment
+- A Linux server (Ubuntu 22.04+) accessible via SSH
+- DNS A-records pointing all 6 subdomains to the server IP:
+  - `{DOMAIN}`, `api.{DOMAIN}`, `mobile.{DOMAIN}`
+  - `portainer.{DOMAIN}`, `grafana.{DOMAIN}`
+- GitHub repository secrets configured (see [Secrets Reference](#secrets-reference) below)
 
-On each server:
-
-```bash
-cd /home/deploy/iu-alumni
-cp docker/.env.example .env
-# Edit .env with actual values
-vim .env
-```
-
-### 3. Initial deployment
+### Step 1 — Create SSH user on the server (one-time, manual)
 
 ```bash
-# Initialize swarm, network, deploy stack
-./scripts/deploy.sh init
-
-# Set up SSL (replace with your domain and email)
-DOMAIN=alumap-prod.escalopa.com EMAIL=admin@innopolis.university ./scripts/deploy.sh ssl-init
+# On the server as root:
+adduser deploy
+usermod -aG sudo deploy
+mkdir -p /home/deploy/.ssh
+echo "YOUR_PUBLIC_KEY" >> /home/deploy/.ssh/authorized_keys
+chmod 700 /home/deploy/.ssh && chmod 600 /home/deploy/.ssh/authorized_keys
+chown -R deploy:deploy /home/deploy/.ssh
 ```
 
-### 4. Subsequent deployments
+### Step 2 — Provision server + deploy infrastructure
 
-Automatic via GitHub Actions on push to `main`/`develop`, or manually:
+Trigger the **Setup Server** workflow in `iu-alumni-infra`:
 
-```bash
-./scripts/deploy.sh deploy
+```txt
+GitHub → iu-alumni-infra → Actions → Setup Server → Run workflow
+Select environment: testing  (or production)
 ```
+
+This workflow will:
+
+1. Run Ansible to install Docker, configure UFW/Fail2ban, set up directories
+2. Write the `.env` file on the server from GitHub secrets (no manual editing needed)
+3. Clone the infra repo on the server and run `deploy.sh`:
+   - Creates the `iu_alumni_network` overlay network
+   - Generates nginx configs from templates
+   - Deploys the infra stack (nginx, postgres, minio, portainer, grafana, loki, prometheus)
+   - Bootstraps SSL certificates via Let's Encrypt (auto-detected on first run)
+
+### Step 3 — Deploy application services
+
+After the infra stack is running, push or trigger deploys for each app.
+These can be done in any order (nginx routes activate as each service comes up):
+
+```txt
+# Option A: push to the target branch
+git push origin develop   # deploys to testing
+git push origin main      # deploys to production
+
+# Option B: manually trigger each workflow
+GitHub → {repo} → Actions → Deploy → Run workflow
+```
+
+Deploy each service:
+
+- `iu-alumni-backend` → Deploy
+- `iu-alumni-frontend` → Deploy
+- `iu-alumni-mobile` → Deploy (builds a separate image per environment — see note below)
+
+> **Mobile note:** The Flutter web app bakes `API_BASE_URL` into the binary at compile time.
+> Two separate Docker images are built: one for testing (`sha-test` tag), one for production (`sha` tag).
+> If you change the domain, you must retrigger a mobile deploy to rebuild with the new URL.
+
+---
+
+## Day-to-Day Deployment
+
+| Action | How |
+|--------|-----|
+| Deploy backend | Push to `develop` or `main` |
+| Deploy frontend | Push to `develop` or `main` |
+| Deploy mobile | Push to `develop` or `main` in the mobile repo |
+| Redeploy infra | Push changes to `ansible/` or `docker/` in this repo, or trigger manually |
+| Update server config | Change a GitHub secret → re-run Setup Server workflow |
+
+---
+
+## Migrating to a New Server
+
+No files need to change. Only update GitHub secrets:
+
+1. Update `SERVER_HOST` (in the target environment: `testing` or `production`)
+2. Point DNS to the new server IP
+3. Run **Setup Server** workflow → everything is provisioned automatically
+
+If the domain also changes, update `DOMAIN` and `API_BASE_URL` secrets, then redeploy all services.
+
+---
+
+## Secrets Reference
+
+All secrets are set in **GitHub → Settings → Environments** (separate values per `testing` / `production`).
+
+### Infrastructure & SSH (all repos)
+
+| Secret | Description |
+|--------|-------------|
+| `SERVER_HOST` | Server IP or hostname |
+| `SERVER_USER` | SSH username (e.g. `deploy`) |
+| `SERVER_SSH_KEY` | SSH private key (PEM) |
+
+### Server Configuration (iu-alumni-infra only)
+
+Written to the server's `.env` by Ansible — no manual file editing needed.
+
+| Secret | Description |
+|--------|-------------|
+| `DOMAIN` | Base domain, no scheme (e.g. `alumni.example.com`) |
+| `CERTBOT_EMAIL` | Email for Let's Encrypt notifications |
+| `POSTGRES_PASSWORD` | PostgreSQL superuser password |
+| `BACKEND_DB` | Database name (default: `alumni_db`) |
+| `SECRET_KEY` | JWT signing secret |
+| `ADMIN_EMAIL` | Initial admin account email |
+| `ADMIN_PASSWORD` | Initial admin account password |
+| `EMAIL_HASH_SECRET` | Secret for hashing emails |
+| `MAIL_USERNAME` | SMTP username |
+| `MAIL_PASSWORD` | SMTP password |
+| `MAIL_FROM` | From address for outbound email |
+| `MAIL_SERVER` | SMTP host (default: `smtp.gmail.com`) |
+| `MAIL_PORT` | SMTP port (default: `587`) |
+| `TELEGRAM_TOKEN` | Telegram bot token |
+| `ADMIN_CHAT_ID` | Telegram admin group chat ID |
+| `MINIO_ROOT_USER` | MinIO admin username |
+| `MINIO_ROOT_PASSWORD` | MinIO admin password |
+| `GRAFANA_USER` | Grafana admin username |
+| `GRAFANA_PASSWORD` | Grafana admin password |
+
+### Mobile (iu-alumni-mobile only)
+
+| Secret | Description |
+|--------|-------------|
+| `API_BASE_URL` | Full API URL baked into Flutter binary (e.g. `https://api.alumni.example.com`) |
+
+---
 
 ## Local Development
 
@@ -75,141 +177,50 @@ cd docker
 docker compose -f docker-compose.dev.yml up -d
 ```
 
-Then run each app separately:
+Then run each app locally:
 
 ```bash
 # Backend
-cd ../iu-alumni-backend
-docker compose up
+cd iu-alumni-backend && docker compose up
 
-# Bot
-cd ../iu-alumni-bot
-docker compose up
+# Frontend
+cd iu-alumni-frontend && pnpm dev
 
-# Frontend (native, not Docker)
-cd ../iu-alumni-frontend
-pnpm dev
+# Mobile (web)
+cd iu-alumni-mobile && flutter run -d chrome --dart-define=API_BASE_URL=http://localhost:8080
 ```
 
-## Secrets
+---
 
-### GitHub Repository Secrets (per app repo)
+## Repository Structure
 
-Required in **each** app repository's GitHub Settings > Secrets:
-
-| Secret | Description | Repos |
-|--------|-------------|-------|
-| `TEST_SERVER_HOST` | Testing server IP address | backend, frontend, bot, infra |
-| `PROD_SERVER_HOST` | Production server IP address | backend, frontend, bot, infra |
-| `SERVER_USER` | SSH username for deployment | backend, frontend, bot, infra |
-| `SERVER_SSH_KEY` | SSH private key for deployment | backend, frontend, bot, infra |
-
-> `GITHUB_TOKEN` is automatically available for GHCR pushes.
-
-#### Mobile-specific secrets (iu-alumni-mobile repo only)
-
-| Secret | Description |
-|--------|-------------|
-| `ANDROID_KEYSTORE_BASE64` | Base64-encoded release keystore file |
-| `ANDROID_KEYSTORE_PASSWORD` | Keystore password |
-| `ANDROID_KEY_ALIAS` | Key alias in keystore |
-| `ANDROID_KEY_PASSWORD` | Key password |
-| `API_BASE_URL` | Backend API URL (e.g. `https://alumap-prod.escalopa.com/api`) |
-| `APP_METRICA_KEY` | Yandex AppMetrica key |
-| `WEB_SALT` | Web salt for hashing |
-| `RUSTORE_COMPANY_ID` | RuStore developer company ID |
-| `RUSTORE_PRIVATE_KEY` | RSA private key (PEM) for RuStore API auth |
-| `RUSTORE_KEY_ID` | RuStore API key ID |
-
-To generate the keystore base64 secret:
-```bash
-base64 -i release.keystore | tr -d '\n'
-```
-
-### Server Environment Variables (.env)
-
-Stored in `/home/deploy/iu-alumni/.env` on each server:
-
-| Variable | Description | Where |
-|----------|-------------|-------|
-| **PostgreSQL** | | |
-| `POSTGRES_USER` | DB superuser | Server |
-| `POSTGRES_PASSWORD` | DB password | Server |
-| `BACKEND_DB` | Backend database name | Server |
-| `BOT_DB` | Bot database name | Server |
-| **Backend** | | |
-| `SECRET_KEY` | JWT signing secret | Server |
-| `ADMIN_EMAIL` | Initial admin email | Server |
-| `ADMIN_PASSWORD` | Initial admin password | Server |
-| `CORS_ORIGINS` | Allowed CORS origins (comma-sep) | Server |
-| `EMAIL_HASH_SECRET` | Email hashing secret | Server |
-| `ENVIRONMENT` | `DEV` or `PROD` | Server |
-| **Email (SMTP)** | | |
-| `MAIL_USERNAME` | SMTP username | Server |
-| `MAIL_PASSWORD` | SMTP password | Server |
-| `MAIL_PORT` | SMTP port | Server |
-| `MAIL_SERVER` | SMTP host | Server |
-| `MAIL_FROM` | From email | Server |
-| `MAIL_FROM_NAME` | From name | Server |
-| **Telegram Bot** | | |
-| `TELEGRAM_TOKEN` | Bot API token | Server |
-| `ADMIN_CHAT_ID` | Admin group chat ID | Server |
-| `MINI_APP_URL` | Telegram Mini App URL | Server |
-| **MinIO** | | |
-| `MINIO_ROOT_USER` | MinIO admin user | Server |
-| `MINIO_ROOT_PASSWORD` | MinIO admin password | Server |
-| **Grafana** | | |
-| `GRAFANA_USER` | Grafana admin user | Server |
-| `GRAFANA_PASSWORD` | Grafana admin password | Server |
-| **Docker Images** | | |
-| `FRONTEND_IMAGE` | Frontend Docker image | Server |
-| `BACKEND_IMAGE` | Backend Docker image | Server |
-| `BOT_IMAGE` | Bot Docker image | Server |
-| `DOMAIN` | Server domain name | Server |
-
-## Directory Structure
-
-```
+```txt
 iu-alumni-infra/
 ├── ansible/
 │   ├── ansible.cfg
-│   ├── inventory.yml
+│   ├── inventory.yml                   # dynamic — all values from CI/CD secrets
 │   └── playbooks/
-│       ├── setup-server.yml      # Server provisioning
-│       └── deploy-stack.yml      # Stack deployment
+│       ├── setup-server.yml            # provisions server + writes .env
+│       └── templates/
+│           └── env.j2                  # .env template rendered from secrets
 ├── docker/
-│   ├── stack.yml                 # Production Docker stack
-│   ├── docker-compose.dev.yml    # Local dev services
-│   ├── init-databases.sh         # PostgreSQL multi-DB init
-│   └── .env.example              # Environment template
+│   ├── stack.yml                       # infra Docker Swarm stack
+│   ├── docker-compose.dev.yml          # local dev services
+│   ├── init-databases.sh               # postgres multi-db init
+│   └── .env.example                    # reference — actual .env written by Ansible
 ├── nginx/
-│   ├── app.conf.template         # Full HTTPS nginx config
-│   └── app-init.conf.template    # HTTP-only for SSL setup
-├── loki/
-│   └── loki-config.yml           # Loki log aggregation config
-├── promtail/
-│   └── promtail-config.yml       # Promtail log shipping config
+│   ├── app.conf.template               # {DOMAIN} → frontend
+│   ├── api.conf.template               # api.{DOMAIN} → backend
+│   ├── mobile.conf.template            # mobile.{DOMAIN} → mobile
+│   ├── portainer.conf.template         # portainer.{DOMAIN} → portainer
+│   ├── grafana.conf.template           # grafana.{DOMAIN} → grafana
+│   └── app-init.conf.template          # HTTP-only config for SSL bootstrap
 ├── scripts/
-│   └── deploy.sh                 # Server deploy helper
-└── .github/
-    └── workflows/
-        └── deploy.yml            # CI/CD for infra changes
-```
-
-## Setting Up Telegram Webhook
-
-After deploying, set the Telegram webhook to point to your domain:
-
-```bash
-curl -X POST "https://api.telegram.org/bot${TELEGRAM_TOKEN}/setWebhook" \
-  -H "Content-Type: application/json" \
-  -d '{"url": "https://alumap-prod.escalopa.com/bot/webhook"}'
-```
-
-## SSL Certificate Renewal
-
-Certbot runs automatically in the stack and renews certificates. To manually renew:
-
-```bash
-./scripts/deploy.sh ssl-renew
+│   └── deploy.sh                       # orchestrates nginx + SSL + stack deploy
+├── terraform/
+│   └── github/                         # GitHub repo settings, branch protection, environments
+└── .github/workflows/
+    ├── setup-server.yml                # provision server (trigger manually or on ansible changes)
+    ├── deploy.yml                      # redeploy infra stack
+    └── deploy-app.yml                  # reusable workflow called by all app repos
 ```

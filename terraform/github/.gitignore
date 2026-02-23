@@ -1,0 +1,8 @@
+# Secret values — never commit
+terraform.tfvars
+
+# Terraform state (use remote backend in production)
+*.tfstate
+*.tfstate.*
+.terraform/
+.terraform.lock.hcl
