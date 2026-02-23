@@ -20,6 +20,7 @@ NETWORK_NAME="iu_alumni_network"
 
 # ── Load environment ────────────────────────────────────────────────────────
 if [ -f "$ENV_FILE" ]; then
+    # shellcheck source=/dev/null
     set -a && . "$ENV_FILE" && set +a
 fi
 
