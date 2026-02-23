@@ -240,17 +240,6 @@
       no_log: true
 
     # ── Login to GHCR ────────────────────────────────────
-    - name: Log in to GitHub Container Registry
-      become: true
-      become_user: "{{ ansible_user }}"
-      ansible.builtin.shell:
-        cmd: |
-          set -o pipefail
-          echo "{{ ghcr_token }}" | docker login ghcr.io -u {{ ghcr_user }} --password-stdin
-        executable: /bin/bash
-      when: ghcr_token is defined and ghcr_user is defined
-      no_log: true
-      changed_when: true
 
   handlers:
     - name: Restart fail2ban

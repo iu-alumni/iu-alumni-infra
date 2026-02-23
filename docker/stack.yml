@@ -244,13 +244,13 @@ services:
   # ── cAdvisor (container metrics) ──────────────────────
   # Runs on every node; scrape target for Prometheus at :8080
   cadvisor:
-    image: gcr.io/cadvisor/cadvisor:v0.49.1
+    image: google/cadvisor:latest
     command:
       - '--housekeeping_interval=30s'
       - '--docker_only=true'
     volumes:
       - /:/rootfs:ro
-      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /var/run:/var/run:rw
       - /sys:/sys:ro
       - /var/lib/docker:/var/lib/docker:ro
     networks:
