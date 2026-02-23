@@ -16,8 +16,9 @@ EOT
 
 testing_domain            = "alumni-test.example.com"
 testing_certbot_email     = "admin@example.com"
+testing_postgres_user     = "postgres"
 testing_postgres_password = "changeme"
-testing_backend_db        = "alumni_db"
+testing_backend_db        = "iu_alumni_db"
 testing_secret_key        = "changeme"
 testing_admin_email       = "admin@example.com"
 testing_admin_password    = "changeme"
@@ -47,8 +48,9 @@ EOT
 
 production_domain            = "alumni.example.com"
 production_certbot_email     = "admin@example.com"
+production_postgres_user     = "postgres"
 production_postgres_password = "changeme"
-production_backend_db        = "alumni_db"
+production_backend_db        = "iu_alumni_db"
 production_secret_key        = "changeme"
 production_admin_email       = "admin@example.com"
 production_admin_password    = "changeme"

@@ -303,7 +303,7 @@ services:
   postgres-exporter:
     image: prometheuscommunity/postgres-exporter:v0.15.0
     environment:
-      DATA_SOURCE_NAME: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD}@postgres:5432/${BACKEND_DB:-alumni_db}?sslmode=disable
+      DATA_SOURCE_NAME: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD}@postgres:5432/${BACKEND_DB:-iu_alumni_db}?sslmode=disable
     networks:
       iu_alumni_network:
         aliases:
