@@ -81,9 +81,9 @@ jobs:
 
             REPO_DIR="$DEPLOY_DIR/infra"
             if [ -d "$REPO_DIR/.git" ]; then
-              cd "$REPO_DIR" && git fetch origin && git reset --hard origin/develop
+              cd "$REPO_DIR" && git fetch origin && git reset --hard origin/${{ github.ref_name }}
             else
-              git clone -b develop \
+              git clone -b ${{ github.ref_name }} \
                 https://github.com/${{ github.repository }}.git "$REPO_DIR"
             fi
 
