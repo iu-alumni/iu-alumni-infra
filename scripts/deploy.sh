@@ -86,6 +86,7 @@ init_ssl() {
         certbot/certbot certonly --webroot \
             --webroot-path /var/www/certbot \
             -d "$DOMAIN" \
+            -d "admin.$DOMAIN" \
             -d "api.$DOMAIN" \
             -d "mobile.$DOMAIN" \
             -d "portainer.$DOMAIN" \

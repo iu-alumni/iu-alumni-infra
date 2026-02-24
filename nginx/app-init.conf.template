@@ -9,7 +9,7 @@
 
 server {
     listen 80;
-    server_name ${DOMAIN} api.${DOMAIN} mobile.${DOMAIN} portainer.${DOMAIN} grafana.${DOMAIN};
+    server_name ${DOMAIN} admin.${DOMAIN} api.${DOMAIN} mobile.${DOMAIN} portainer.${DOMAIN} grafana.${DOMAIN};
 
     location /.well-known/acme-challenge/ {
         root /var/www/certbot;
