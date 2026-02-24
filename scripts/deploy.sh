@@ -83,7 +83,7 @@ init_ssl() {
     docker run --rm \
         -v "$CERTBOT_CONF_DIR:/etc/letsencrypt" \
         -v "$CERTBOT_WWW_DIR:/var/www/certbot" \
-        certbot/certbot certonly --webroot \
+        certbot/certbot certonly --webroot --expand \
             --webroot-path /var/www/certbot \
             -d "$DOMAIN" \
             -d "admin.$DOMAIN" \
