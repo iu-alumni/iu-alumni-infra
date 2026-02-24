@@ -5,7 +5,7 @@
 set -e
 
 psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_USER" <<-EOSQL
-    CREATE DATABASE iu_alumni_db;
+    CREATE DATABASE $POSTGRES_DB;
 EOSQL
 
-echo "Created database: iu_alumni_db"
+echo "Created database: $POSTGRES_DB"
