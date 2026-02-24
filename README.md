@@ -143,7 +143,7 @@ Written to the server's `.env` by Ansible — no manual file editing needed.
 | `DOMAIN` | Base domain, no scheme (e.g. `alumni.example.com`) |
 | `CERTBOT_EMAIL` | Email for Let's Encrypt notifications |
 | `POSTGRES_PASSWORD` | PostgreSQL superuser password |
-| `BACKEND_DB` | Database name (default: `iu_alumni_db`) |
+| `POSTGRES_DB` | Database name (default: `iu_alumni_db`) |
 | `SECRET_KEY` | JWT signing secret |
 | `ADMIN_EMAIL` | Initial admin account email |
 | `ADMIN_PASSWORD` | Initial admin account password |

@@ -52,7 +52,7 @@ jobs:
             -e "certbot_email=${{ secrets.CERTBOT_EMAIL }}" \
             -e "postgres_password=${{ secrets.POSTGRES_PASSWORD }}" \
             -e "postgres_user=${{ secrets.POSTGRES_USER }}" \
-            -e "backend_db=${{ secrets.BACKEND_DB }}" \
+            -e "postgres_db=${{ secrets.POSTGRES_DB }}" \
             -e "secret_key=${{ secrets.SECRET_KEY }}" \
             -e "admin_email=${{ secrets.ADMIN_EMAIL }}" \
             -e "admin_password=${{ secrets.ADMIN_PASSWORD }}" \
@@ -124,7 +124,7 @@ jobs:
             -e "certbot_email=${{ secrets.CERTBOT_EMAIL }}" \
             -e "postgres_password=${{ secrets.POSTGRES_PASSWORD }}" \
             -e "postgres_user=${{ secrets.POSTGRES_USER }}" \
-            -e "backend_db=${{ secrets.BACKEND_DB }}" \
+            -e "postgres_db=${{ secrets.POSTGRES_DB }}" \
             -e "secret_key=${{ secrets.SECRET_KEY }}" \
             -e "admin_email=${{ secrets.ADMIN_EMAIL }}" \
             -e "admin_password=${{ secrets.ADMIN_PASSWORD }}" \

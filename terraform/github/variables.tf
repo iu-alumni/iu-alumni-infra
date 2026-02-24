@@ -36,7 +36,7 @@ variable "testing_postgres_password" {
   type = string
   sensitive = true
 }
-variable "testing_backend_db"        { type = string }
+variable "testing_postgres_db"        { type = string }
 
 # Backend
 variable "testing_secret_key"        {
@@ -109,7 +109,7 @@ variable "production_postgres_password" {
   type = string
   sensitive = true
 }
-variable "production_backend_db"        { type = string }
+variable "production_postgres_db"        { type = string }
 
 # Backend
 variable "production_secret_key"        {
