@@ -106,7 +106,7 @@ locals {
     # PostgreSQL
     POSTGRES_USER     = var.testing_postgres_user
     POSTGRES_PASSWORD = var.testing_postgres_password
-    POSTGRES_DB        = var.testing_postgres_db
+    BACKEND_DB        = var.testing_backend_db
 
     # Backend
     SECRET_KEY        = var.testing_secret_key
@@ -144,7 +144,7 @@ locals {
     # PostgreSQL
     POSTGRES_USER     = var.production_postgres_user
     POSTGRES_PASSWORD = var.production_postgres_password
-    POSTGRES_DB        = var.production_postgres_db
+    BACKEND_DB        = var.production_backend_db
 
     # Backend
     SECRET_KEY        = var.production_secret_key
