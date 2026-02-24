@@ -8,7 +8,7 @@ on:
         required: true
         type: string
       branch:
-        description: "Branch to deploy (develop or main)"
+        description: "Branch to deploy"
         required: true
         type: string
       environment:

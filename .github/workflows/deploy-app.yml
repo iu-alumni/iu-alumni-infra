@@ -27,7 +27,7 @@ on:
         type: string
         required: true
       branch:
-        description: "Branch to deploy (develop or main)"
+        description: "Branch to deploy"
         type: string
         required: true
       environment:
