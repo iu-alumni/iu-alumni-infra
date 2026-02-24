@@ -12,11 +12,12 @@ locals {
 
   # CI check names (job names) that must pass before merging.
   # These match the job IDs in each repo's deploy.yml workflow.
+  # Reusable workflows report checks as "{parent-job} / {called-job}".
   required_checks = {
-    backend  = ["build-image", "deploy-testing"]
-    frontend = ["build-image", "deploy-testing"]
-    mobile   = ["build-testing", "deploy-testing"]
-    infra    = ["deploy-testing"]
+    backend  = ["build-image", "deploy-testing / deploy"]
+    frontend = ["build-image", "deploy-testing / deploy"]
+    mobile   = ["build-testing", "deploy-testing / deploy"]
+    infra    = ["deploy-testing / deploy"]
   }
 }
 

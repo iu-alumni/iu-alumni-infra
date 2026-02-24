@@ -95,45 +95,79 @@ resource "github_actions_environment_secret" "production_server_ssh_key" {
 
 locals {
   infra_testing_secrets = {
-    DOMAIN                = var.testing_domain
-    CERTBOT_EMAIL         = var.testing_certbot_email
-    POSTGRES_PASSWORD     = var.testing_postgres_password
-    POSTGRES_USER         = var.testing_postgres_user
-    BACKEND_DB            = var.testing_backend_db
-    SECRET_KEY            = var.testing_secret_key
-    ADMIN_EMAIL           = var.testing_admin_email
-    ADMIN_PASSWORD        = var.testing_admin_password
-    EMAIL_HASH_SECRET     = var.testing_email_hash_secret
-    MAIL_USERNAME         = var.testing_mail_username
-    MAIL_PASSWORD         = var.testing_mail_password
-    MAIL_FROM             = var.testing_mail_from
-    MAIL_SERVER           = var.testing_mail_server
-    MAIL_PORT             = var.testing_mail_port
-    TELEGRAM_TOKEN        = var.testing_telegram_token
-    ADMIN_CHAT_ID         = var.testing_admin_chat_id
-    GRAFANA_USER          = var.testing_grafana_user
-    GRAFANA_PASSWORD      = var.testing_grafana_password
+    # Deployment
+    DEPLOY_DIR  = var.testing_deploy_dir
+    DOMAIN      = var.testing_domain
+    ENVIRONMENT = var.testing_environment
+
+    # SSL
+    CERTBOT_EMAIL = var.testing_certbot_email
+
+    # PostgreSQL
+    POSTGRES_USER     = var.testing_postgres_user
+    POSTGRES_PASSWORD = var.testing_postgres_password
+    POSTGRES_DB        = var.testing_postgres_db
+
+    # Backend
+    SECRET_KEY        = var.testing_secret_key
+    ADMIN_EMAIL       = var.testing_admin_email
+    ADMIN_PASSWORD    = var.testing_admin_password
+    EMAIL_HASH_SECRET = var.testing_email_hash_secret
+
+    # Mail
+    MAIL_USERNAME  = var.testing_mail_username
+    MAIL_PASSWORD  = var.testing_mail_password
+    MAIL_FROM      = var.testing_mail_from
+    MAIL_FROM_NAME = var.testing_mail_from_name
+    MAIL_SERVER    = var.testing_mail_server
+    MAIL_PORT      = var.testing_mail_port
+
+    # Telegram
+    TELEGRAM_TOKEN = var.testing_telegram_token
+    ADMIN_CHAT_ID  = var.testing_admin_chat_id
+    MINI_APP_URL   = var.testing_mini_app_url
+
+    # Grafana
+    GRAFANA_USER     = var.testing_grafana_user
+    GRAFANA_PASSWORD = var.testing_grafana_password
   }
 
   infra_production_secrets = {
-    DOMAIN                = var.production_domain
-    CERTBOT_EMAIL         = var.production_certbot_email
-    POSTGRES_PASSWORD     = var.production_postgres_password
-    POSTGRES_USER         = var.production_postgres_user
-    BACKEND_DB            = var.production_backend_db
-    SECRET_KEY            = var.production_secret_key
-    ADMIN_EMAIL           = var.production_admin_email
-    ADMIN_PASSWORD        = var.production_admin_password
-    EMAIL_HASH_SECRET     = var.production_email_hash_secret
-    MAIL_USERNAME         = var.production_mail_username
-    MAIL_PASSWORD         = var.production_mail_password
-    MAIL_FROM             = var.production_mail_from
-    MAIL_SERVER           = var.production_mail_server
-    MAIL_PORT             = var.production_mail_port
-    TELEGRAM_TOKEN        = var.production_telegram_token
-    ADMIN_CHAT_ID         = var.production_admin_chat_id
-    GRAFANA_USER          = var.production_grafana_user
-    GRAFANA_PASSWORD      = var.production_grafana_password
+    # Deployment
+    DEPLOY_DIR  = var.production_deploy_dir
+    DOMAIN      = var.production_domain
+    ENVIRONMENT = var.production_environment
+
+    # SSL
+    CERTBOT_EMAIL = var.production_certbot_email
+
+    # PostgreSQL
+    POSTGRES_USER     = var.production_postgres_user
+    POSTGRES_PASSWORD = var.production_postgres_password
+    POSTGRES_DB        = var.production_postgres_db
+
+    # Backend
+    SECRET_KEY        = var.production_secret_key
+    ADMIN_EMAIL       = var.production_admin_email
+    ADMIN_PASSWORD    = var.production_admin_password
+    EMAIL_HASH_SECRET = var.production_email_hash_secret
+
+    # Mail
+    MAIL_USERNAME  = var.production_mail_username
+    MAIL_PASSWORD  = var.production_mail_password
+    MAIL_FROM      = var.production_mail_from
+    MAIL_FROM_NAME = var.production_mail_from_name
+    MAIL_SERVER    = var.production_mail_server
+    MAIL_PORT      = var.production_mail_port
+
+    # Telegram
+    TELEGRAM_TOKEN = var.production_telegram_token
+    ADMIN_CHAT_ID  = var.production_admin_chat_id
+    MINI_APP_URL   = var.production_mini_app_url
+
+    # Grafana
+    GRAFANA_USER     = var.production_grafana_user
+    GRAFANA_PASSWORD = var.production_grafana_password
   }
 }
 

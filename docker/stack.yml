@@ -20,9 +20,9 @@ services:
       - "80:80"
       - "443:443"
     volumes:
-      - ${DEPLOY_DIR:-/home/deploy/iu-alumni}/nginx/conf.d:/etc/nginx/conf.d:ro
-      - ${DEPLOY_DIR:-/home/deploy/iu-alumni}/nginx/certbot/conf:/etc/letsencrypt:ro
-      - ${DEPLOY_DIR:-/home/deploy/iu-alumni}/nginx/certbot/www:/var/www/certbot:ro
+      - ${DEPLOY_DIR}/nginx/conf.d:/etc/nginx/conf.d:ro
+      - ${DEPLOY_DIR}/nginx/certbot/conf:/etc/letsencrypt:ro
+      - ${DEPLOY_DIR}/nginx/certbot/www:/var/www/certbot:ro
     networks:
       iu_alumni_network:
         aliases:
@@ -42,8 +42,8 @@ services:
   certbot:
     image: certbot/certbot
     volumes:
-      - ${DEPLOY_DIR:-/home/deploy/iu-alumni}/nginx/certbot/conf:/etc/letsencrypt
-      - ${DEPLOY_DIR:-/home/deploy/iu-alumni}/nginx/certbot/www:/var/www/certbot
+      - ${DEPLOY_DIR}/nginx/certbot/conf:/etc/letsencrypt
+      - ${DEPLOY_DIR}/nginx/certbot/www:/var/www/certbot
     entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done;'"
     networks:
       - iu_alumni_network
@@ -63,11 +63,11 @@ services:
   postgres:
     image: postgres:16
     environment:
-      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     volumes:
-      - ${DEPLOY_DIR:-/home/deploy/iu-alumni}/data/postgres:/var/lib/postgresql/data
-      - ${DEPLOY_DIR:-/home/deploy/iu-alumni}/infra/docker/init-databases.sh:/docker-entrypoint-initdb.d/init-databases.sh:ro
+      - ${DEPLOY_DIR}/data/postgres:/var/lib/postgresql/data
+      - ${DEPLOY_DIR}/infra/docker/init-databases.sh:/docker-entrypoint-initdb.d/init-databases.sh:ro
     networks:
       iu_alumni_network:
         aliases:
@@ -118,12 +118,12 @@ services:
   grafana:
     image: grafana/grafana:11.0.0
     environment:
-      GF_SECURITY_ADMIN_USER: ${GRAFANA_USER:-admin}
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_USER}
       GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD}
       GF_SERVER_ROOT_URL: https://grafana.${DOMAIN}/
     volumes:
       - grafana_data:/var/lib/grafana
-      - ${DEPLOY_DIR:-/home/deploy/iu-alumni}/infra/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ${DEPLOY_DIR}/infra/grafana/provisioning:/etc/grafana/provisioning:ro
     networks:
       iu_alumni_network:
         aliases:
@@ -149,7 +149,7 @@ services:
       - '--storage.tsdb.path=/prometheus'
       - '--storage.tsdb.retention.time=30d'
     volumes:
-      - ${DEPLOY_DIR:-/home/deploy/iu-alumni}/infra/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ${DEPLOY_DIR}/infra/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - prometheus_data:/prometheus
     networks:
       iu_alumni_network:
@@ -200,7 +200,7 @@ services:
   postgres-exporter:
     image: prometheuscommunity/postgres-exporter:v0.15.0
     environment:
-      DATA_SOURCE_NAME: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD}@postgres:5432/${BACKEND_DB:-iu_alumni_db}?sslmode=disable
+      DATA_SOURCE_NAME: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?sslmode=disable
     networks:
       iu_alumni_network:
         aliases:
