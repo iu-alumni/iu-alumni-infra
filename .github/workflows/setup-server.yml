@@ -48,7 +48,9 @@ jobs:
             -e "server_ip=${{ secrets.SERVER_HOST }}" \
             -e "server_user=${{ secrets.SERVER_USER }}" \
             -e "ghcr_user=${{ github.actor }}" \
+            -e "deploy_dir=${{ secrets.DEPLOY_DIR }}" \
             -e "domain=${{ secrets.DOMAIN }}" \
+            -e "environment=${{ secrets.ENVIRONMENT }}" \
             -e "certbot_email=${{ secrets.CERTBOT_EMAIL }}" \
             -e "postgres_password=${{ secrets.POSTGRES_PASSWORD }}" \
             -e "postgres_user=${{ secrets.POSTGRES_USER }}" \
@@ -60,10 +62,12 @@ jobs:
             -e "mail_username=${{ secrets.MAIL_USERNAME }}" \
             -e "mail_password=${{ secrets.MAIL_PASSWORD }}" \
             -e "mail_from=${{ secrets.MAIL_FROM }}" \
+            -e "mail_from_name=${{ secrets.MAIL_FROM_NAME }}" \
             -e "mail_server=${{ secrets.MAIL_SERVER }}" \
             -e "mail_port=${{ secrets.MAIL_PORT }}" \
             -e "telegram_token=${{ secrets.TELEGRAM_TOKEN }}" \
             -e "admin_chat_id=${{ secrets.ADMIN_CHAT_ID }}" \
+            -e "mini_app_url=${{ secrets.MINI_APP_URL }}" \
             -e "grafana_user=${{ secrets.GRAFANA_USER }}" \
             -e "grafana_password=${{ secrets.GRAFANA_PASSWORD }}" \
             --private-key ~/.ssh/deploy_key
@@ -120,7 +124,10 @@ jobs:
             --limit production \
             -e "server_ip=${{ secrets.SERVER_HOST }}" \
             -e "server_user=${{ secrets.SERVER_USER }}" \
+            -e "ghcr_user=${{ github.actor }}" \
+            -e "deploy_dir=${{ secrets.DEPLOY_DIR }}" \
             -e "domain=${{ secrets.DOMAIN }}" \
+            -e "environment=${{ secrets.ENVIRONMENT }}" \
             -e "certbot_email=${{ secrets.CERTBOT_EMAIL }}" \
             -e "postgres_password=${{ secrets.POSTGRES_PASSWORD }}" \
             -e "postgres_user=${{ secrets.POSTGRES_USER }}" \
@@ -132,10 +139,12 @@ jobs:
             -e "mail_username=${{ secrets.MAIL_USERNAME }}" \
             -e "mail_password=${{ secrets.MAIL_PASSWORD }}" \
             -e "mail_from=${{ secrets.MAIL_FROM }}" \
+            -e "mail_from_name=${{ secrets.MAIL_FROM_NAME }}" \
             -e "mail_server=${{ secrets.MAIL_SERVER }}" \
             -e "mail_port=${{ secrets.MAIL_PORT }}" \
             -e "telegram_token=${{ secrets.TELEGRAM_TOKEN }}" \
             -e "admin_chat_id=${{ secrets.ADMIN_CHAT_ID }}" \
+            -e "mini_app_url=${{ secrets.MINI_APP_URL }}" \
             -e "grafana_user=${{ secrets.GRAFANA_USER }}" \
             -e "grafana_password=${{ secrets.GRAFANA_PASSWORD }}" \
             --private-key ~/.ssh/deploy_key
