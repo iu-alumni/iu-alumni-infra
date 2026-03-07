@@ -81,6 +81,14 @@ variable "testing_grafana_password" {
 
 # Mobile
 variable "testing_api_base_url" { type = string }
+variable "testing_app_metrica_key" {
+  type      = string
+  sensitive = true
+}
+variable "testing_web_salt" {
+  type      = string
+  sensitive = true
+}
 
 # ── Production environment ───────────────────────────────────────────────────
 
@@ -154,3 +162,11 @@ variable "production_grafana_password" {
 
 # Mobile
 variable "production_api_base_url" { type = string }
+variable "production_app_metrica_key" {
+  type      = string
+  sensitive = true
+}
+variable "production_web_salt" {
+  type      = string
+  sensitive = true
+}
