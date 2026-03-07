@@ -60,12 +60,14 @@ jobs:
             -e "mail_username=${{ secrets.MAIL_USERNAME }}" \
             -e "mail_password=${{ secrets.MAIL_PASSWORD }}" \
             -e "mail_from=${{ secrets.MAIL_FROM }}" \
+            -e "mail_from_name=${{ secrets.MAIL_FROM_NAME }}" \
             -e "mail_server=${{ secrets.MAIL_SERVER }}" \
             -e "mail_port=${{ secrets.MAIL_PORT }}" \
             -e "telegram_token=${{ secrets.TELEGRAM_TOKEN }}" \
             -e "admin_chat_id=${{ secrets.ADMIN_CHAT_ID }}" \
             -e "grafana_user=${{ secrets.GRAFANA_USER }}" \
             -e "grafana_password=${{ secrets.GRAFANA_PASSWORD }}" \
+            -e "environment=${{ secrets.ENVIRONMENT }}" \
             --private-key ~/.ssh/deploy_key
 
       - name: Bootstrap infrastructure (first deploy + SSL)
@@ -132,12 +134,14 @@ jobs:
             -e "mail_username=${{ secrets.MAIL_USERNAME }}" \
             -e "mail_password=${{ secrets.MAIL_PASSWORD }}" \
             -e "mail_from=${{ secrets.MAIL_FROM }}" \
+            -e "mail_from_name=${{ secrets.MAIL_FROM_NAME }}" \
             -e "mail_server=${{ secrets.MAIL_SERVER }}" \
             -e "mail_port=${{ secrets.MAIL_PORT }}" \
             -e "telegram_token=${{ secrets.TELEGRAM_TOKEN }}" \
             -e "admin_chat_id=${{ secrets.ADMIN_CHAT_ID }}" \
             -e "grafana_user=${{ secrets.GRAFANA_USER }}" \
             -e "grafana_password=${{ secrets.GRAFANA_PASSWORD }}" \
+            -e "environment=${{ secrets.ENVIRONMENT }}" \
             --private-key ~/.ssh/deploy_key
 
       - name: Bootstrap infrastructure (first deploy + SSL)
