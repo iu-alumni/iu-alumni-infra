@@ -187,7 +187,8 @@ resource "github_actions_environment_secret" "infra_production" {
   plaintext_value = each.value
 }
 
-# ── Mobile-specific: API_BASE_URL (baked into Flutter binary at build time) ──
+# ── Mobile-specific: API_BASE_URL, APP_METRICA_KEY, IU_ALUMNI_WEB_SALT ───────
+# All are baked into the Flutter binary at build time via --dart-define
 
 resource "github_actions_environment_secret" "mobile_api_base_url_testing" {
   repository      = "iu-alumni-mobile"
@@ -201,4 +202,32 @@ resource "github_actions_environment_secret" "mobile_api_base_url_production" {
   environment     = github_repository_environment.production["mobile"].environment
   secret_name     = "API_BASE_URL"
   plaintext_value = var.production_api_base_url
+}
+
+resource "github_actions_environment_secret" "mobile_app_metrica_key_testing" {
+  repository      = "iu-alumni-mobile"
+  environment     = github_repository_environment.testing["mobile"].environment
+  secret_name     = "APP_METRICA_KEY"
+  plaintext_value = var.testing_app_metrica_key
+}
+
+resource "github_actions_environment_secret" "mobile_app_metrica_key_production" {
+  repository      = "iu-alumni-mobile"
+  environment     = github_repository_environment.production["mobile"].environment
+  secret_name     = "APP_METRICA_KEY"
+  plaintext_value = var.production_app_metrica_key
+}
+
+resource "github_actions_environment_secret" "mobile_web_salt_testing" {
+  repository      = "iu-alumni-mobile"
+  environment     = github_repository_environment.testing["mobile"].environment
+  secret_name     = "IU_ALUMNI_WEB_SALT"
+  plaintext_value = var.testing_web_salt
+}
+
+resource "github_actions_environment_secret" "mobile_web_salt_production" {
+  repository      = "iu-alumni-mobile"
+  environment     = github_repository_environment.production["mobile"].environment
+  secret_name     = "IU_ALUMNI_WEB_SALT"
+  plaintext_value = var.production_web_salt
 }

@@ -52,7 +52,9 @@ testing_grafana_user     = "admin"
 testing_grafana_password = "changeme"
 
 # Mobile
-testing_api_base_url = "https://api.alumni-test.example.com"
+testing_api_base_url    = "https://api.alumni-test.example.com"
+testing_app_metrica_key = ""
+testing_web_salt        = "changeme"
 
 # ── Production environment ───────────────────────────────────────────────────
 
@@ -102,4 +104,6 @@ production_grafana_user     = "admin"
 production_grafana_password = "changeme"
 
 # Mobile
-production_api_base_url = "https://api.alumni.example.com"
+production_api_base_url    = "https://api.alumni.example.com"
+production_app_metrica_key = ""
+production_web_salt        = "changeme"
