@@ -197,6 +197,23 @@ resource "github_actions_environment_secret" "infra_production" {
   plaintext_value = each.value
 }
 
+# ── Frontend-specific: NUXT_PUBLIC_API_BASE ──────────────────────────────────
+# Passed as a build-time env var so the Nuxt app knows which backend to call.
+
+resource "github_actions_environment_secret" "frontend_api_base_url_testing" {
+  repository      = "iu-alumni-frontend"
+  environment     = github_repository_environment.testing["frontend"].environment
+  secret_name     = "NUXT_PUBLIC_API_BASE"
+  plaintext_value = var.testing_api_base_url
+}
+
+resource "github_actions_environment_secret" "frontend_api_base_url_production" {
+  repository      = "iu-alumni-frontend"
+  environment     = github_repository_environment.production["frontend"].environment
+  secret_name     = "NUXT_PUBLIC_API_BASE"
+  plaintext_value = var.production_api_base_url
+}
+
 # ── Mobile-specific: API_BASE_URL, APP_METRICA_KEY, IU_ALUMNI_WEB_SALT ───────
 # All are baked into the Flutter binary at build time via --dart-define
 
