@@ -70,7 +70,7 @@ jobs:
             -e "mini_app_url=${{ secrets.MINI_APP_URL }}" \
             -e "grafana_user=${{ secrets.GRAFANA_USER }}" \
             -e "grafana_password=${{ secrets.GRAFANA_PASSWORD }}" \
-            -e "environment=${{ secrets.ENVIRONMENT }}" \
+            -e "app_environment=${{ secrets.ENVIRONMENT }}" \
             --private-key ~/.ssh/deploy_key
 
       - name: Bootstrap infrastructure (first deploy + SSL)
@@ -148,7 +148,7 @@ jobs:
             -e "mini_app_url=${{ secrets.MINI_APP_URL }}" \
             -e "grafana_user=${{ secrets.GRAFANA_USER }}" \
             -e "grafana_password=${{ secrets.GRAFANA_PASSWORD }}" \
-            -e "environment=${{ secrets.ENVIRONMENT }}" \
+            -e "app_environment=${{ secrets.ENVIRONMENT }}" \
             --private-key ~/.ssh/deploy_key
 
       - name: Bootstrap infrastructure (first deploy + SSL)

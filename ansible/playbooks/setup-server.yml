@@ -219,6 +219,7 @@
         - ""
         - data
         - data/postgres
+        - data/backups
         - nginx
         - nginx/conf.d
         - nginx/certbot/conf

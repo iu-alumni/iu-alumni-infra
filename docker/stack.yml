@@ -88,7 +88,41 @@ services:
           - node.role == manager
 
 
-  # ── Portainer (Docker management) ─────────────────────
+  # ── PostgreSQL Backup ──────────────────────────────────
+  # Daily backups stored in ${DEPLOY_DIR}/data/backups
+  # Retains: 7 daily, 4 weekly, 6 monthly
+  postgres-backup:
+    image: prodrigestivill/postgres-backup-local:16
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      SCHEDULE: "@daily"
+      BACKUP_KEEP_DAYS: "7"
+      BACKUP_KEEP_WEEKS: "4"
+      BACKUP_KEEP_MONTHS: "6"
+      BACKUP_DIR: /backups
+    volumes:
+      - ${DEPLOY_DIR}/data/backups:/backups
+    networks:
+      - iu_alumni_network
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: any
+      resources:
+        limits:
+          cpus: "0.25"
+          memory: 128M
+        reservations:
+          cpus: "0.05"
+          memory: 32M
+      placement:
+        constraints:
+          - node.role == manager
+
+
   # Accessible at portainer.${DOMAIN}
   portainer:
     image: portainer/portainer-ce:latest
