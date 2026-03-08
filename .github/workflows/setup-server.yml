@@ -70,6 +70,7 @@ jobs:
             -e "grafana_user=${{ secrets.GRAFANA_USER }}" \
             -e "grafana_password=${{ secrets.GRAFANA_PASSWORD }}" \
             -e "app_environment=${{ secrets.ENVIRONMENT }}" \
+            -e "cors_origins=${{ secrets.CORS_ORIGINS }}" \
             -e "login_code_expiry_minutes=${{ secrets.LOGIN_CODE_EXPIRY_MINUTES }}" \
             -e "password_reset_expiry_minutes=${{ secrets.PASSWORD_RESET_EXPIRY_MINUTES }}" \
             --private-key ~/.ssh/deploy_key
@@ -149,6 +150,7 @@ jobs:
             -e "grafana_user=${{ secrets.GRAFANA_USER }}" \
             -e "grafana_password=${{ secrets.GRAFANA_PASSWORD }}" \
             -e "app_environment=${{ secrets.ENVIRONMENT }}" \
+            -e "cors_origins=${{ secrets.CORS_ORIGINS }}" \
             -e "login_code_expiry_minutes=${{ secrets.LOGIN_CODE_EXPIRY_MINUTES }}" \
             -e "password_reset_expiry_minutes=${{ secrets.PASSWORD_RESET_EXPIRY_MINUTES }}" \
             --private-key ~/.ssh/deploy_key
