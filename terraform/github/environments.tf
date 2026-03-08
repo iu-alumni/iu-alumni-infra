@@ -130,6 +130,10 @@ locals {
     # Grafana
     GRAFANA_USER     = var.testing_grafana_user
     GRAFANA_PASSWORD = var.testing_grafana_password
+
+    # Auth
+    LOGIN_CODE_EXPIRY_MINUTES      = var.testing_login_code_expiry_minutes
+    PASSWORD_RESET_EXPIRY_MINUTES  = var.testing_password_reset_expiry_minutes
   }
 
   infra_production_secrets = {
@@ -168,6 +172,10 @@ locals {
     # Grafana
     GRAFANA_USER     = var.production_grafana_user
     GRAFANA_PASSWORD = var.production_grafana_password
+
+    # Auth
+    LOGIN_CODE_EXPIRY_MINUTES      = var.production_login_code_expiry_minutes
+    PASSWORD_RESET_EXPIRY_MINUTES  = var.production_password_reset_expiry_minutes
   }
 }
 

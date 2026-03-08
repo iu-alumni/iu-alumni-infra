@@ -79,6 +79,16 @@ variable "testing_grafana_password" {
   sensitive = true
 }
 
+variable "testing_login_code_expiry_minutes" {
+  type    = string
+  default = "10"
+}
+
+variable "testing_password_reset_expiry_minutes" {
+  type    = string
+  default = "30"
+}
+
 # Mobile
 variable "testing_api_base_url" { type = string }
 variable "testing_app_metrica_key" {
@@ -158,6 +168,16 @@ variable "production_grafana_user"     { type = string }
 variable "production_grafana_password" {
   type = string
   sensitive = true
+}
+
+variable "production_login_code_expiry_minutes" {
+  type    = string
+  default = "10"
+}
+
+variable "production_password_reset_expiry_minutes" {
+  type    = string
+  default = "30"
 }
 
 # Mobile
