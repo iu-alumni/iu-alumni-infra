@@ -33,6 +33,7 @@ testing_secret_key        = "changeme"
 testing_admin_email       = "admin@example.com"
 testing_admin_password    = "changeme"
 testing_email_hash_secret = "changeme"
+# testing_cors_origins = "https://alumni-test.example.com"  # defaults to https://<testing_domain>
 
 # Mail
 testing_mail_username  = ""
@@ -89,6 +90,7 @@ production_secret_key        = "changeme"
 production_admin_email       = "admin@example.com"
 production_admin_password    = "changeme"
 production_email_hash_secret = "changeme"
+# production_cors_origins = "https://alumni.example.com"  # defaults to https://<production_domain>
 
 # Mail
 production_mail_username  = ""
