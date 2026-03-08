@@ -9,7 +9,6 @@ locals {
     backend  = "iu-alumni-backend"
     frontend = "iu-alumni-frontend"
     mobile   = "iu-alumni-mobile"
-    bot      = "iu-alumni-bot"
     infra    = "iu-alumni-infra"
   }
 }
@@ -243,18 +242,3 @@ resource "github_actions_environment_secret" "mobile_web_salt_production" {
   plaintext_value = var.production_web_salt
 }
 
-# ── Mobile WebView: MOBILE_URL — URL of the Nuxt web app loaded by the shell ──
-
-resource "github_actions_environment_variable" "mobile_url_testing" {
-  repository    = "iu-alumni-mobile"
-  environment   = github_repository_environment.testing["mobile"].environment
-  variable_name = "MOBILE_URL"
-  value         = "https://mobile.${var.testing_domain}"
-}
-
-resource "github_actions_environment_variable" "mobile_url_production" {
-  repository    = "iu-alumni-mobile"
-  environment   = github_repository_environment.production["mobile"].environment
-  variable_name = "MOBILE_URL"
-  value         = "https://mobile.${var.production_domain}"
-}

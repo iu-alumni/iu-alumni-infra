@@ -7,7 +7,6 @@ locals {
     backend  = "iu-alumni-backend"
     frontend = "iu-alumni-frontend"
     mobile   = "iu-alumni-mobile"
-    bot      = "iu-alumni-bot"
     infra    = "iu-alumni-infra"
   }
 
@@ -17,8 +16,7 @@ locals {
   required_checks = {
     backend  = ["build-image", "deploy-testing / deploy"]
     frontend = ["build-image", "deploy-testing / deploy"]
-    mobile   = ["build-testing"]
-    bot      = ["build-testing", "deploy-testing / deploy"]
+    mobile   = ["build-testing", "deploy-testing / deploy"]
     infra    = ["deploy-testing / deploy"]
   }
 }
@@ -36,10 +34,6 @@ import {
 import {
   to = github_repository.repos["mobile"]
   id = "iu-alumni-mobile"
-}
-import {
-  to = github_repository.repos["bot"]
-  id = "iu-alumni-bot"
 }
 import {
   to = github_repository.repos["infra"]
