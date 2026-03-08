@@ -25,6 +25,7 @@ fi
 
 POSTGRES_USER="${POSTGRES_USER:?POSTGRES_USER must be set in $ENV_FILE}"
 POSTGRES_DB="${POSTGRES_DB:?POSTGRES_DB must be set in $ENV_FILE}"
+POSTGRES_PASSWORD="${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set in $ENV_FILE}"
 
 log()  { echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*"; }
 die()  { echo "Error: $*" >&2; exit 1; }
