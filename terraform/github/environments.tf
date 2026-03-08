@@ -113,7 +113,7 @@ locals {
     ADMIN_EMAIL       = var.testing_admin_email
     ADMIN_PASSWORD    = var.testing_admin_password
     EMAIL_HASH_SECRET = var.testing_email_hash_secret
-    CORS_ORIGINS      = coalesce(var.testing_cors_origins, "https://${var.testing_domain},https://admin.${var.testing_domain}")
+    CORS_ORIGINS      = var.testing_cors_origins
 
     # Mail
     MAIL_USERNAME  = var.testing_mail_username
@@ -156,7 +156,7 @@ locals {
     ADMIN_EMAIL       = var.production_admin_email
     ADMIN_PASSWORD    = var.production_admin_password
     EMAIL_HASH_SECRET = var.production_email_hash_secret
-    CORS_ORIGINS      = coalesce(var.production_cors_origins, "https://${var.production_domain},https://admin.${var.production_domain}")
+    CORS_ORIGINS      = var.production_cors_origins
 
     # Mail
     MAIL_USERNAME  = var.production_mail_username
