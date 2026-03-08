@@ -71,6 +71,28 @@ jobs:
             --private-key ~/.ssh/deploy_key
 
       - name: Bootstrap infrastructure (first deploy + SSL)
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          script: |
+            set -e
+            DEPLOY_DIR="${DEPLOY_DIR:-/home/deploy/iu-alumni}"
+            if [ -f "$DEPLOY_DIR/.env" ]; then set -a && . "$DEPLOY_DIR/.env" && set +a; fi
+
+            REPO_DIR="$DEPLOY_DIR/infra"
+            if [ -d "$REPO_DIR/.git" ]; then
+              cd "$REPO_DIR" && git fetch origin && git reset --hard origin/${{ github.ref_name }}
+            else
+              git clone -b ${{ github.ref_name }} \
+                https://github.com/${{ github.repository }}.git "$REPO_DIR"
+            fi
+
+            chmod +x "$REPO_DIR/scripts/deploy.sh"
+            DEPLOY_DIR="$DEPLOY_DIR" "$REPO_DIR/scripts/deploy.sh" deploy
+
+  setup-production:
     if: >
       (github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'production') ||
       (github.event_name == 'push' && github.ref == 'refs/heads/main')
