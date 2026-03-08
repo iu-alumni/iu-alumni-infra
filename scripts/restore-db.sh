@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
-# scripts/restore.sh - Restore a PostgreSQL backup into the running stack
+# scripts/restore-db.sh - Restore a PostgreSQL backup into the running stack
 #
 # Usage:
-#   restore.sh              — interactive: list backups and prompt for choice
-#   restore.sh <file>       — non-interactive: restore a specific backup file
+#   restore-db.sh              — interactive: list backups and prompt for choice
+#   restore-db.sh <file>       — non-interactive: restore a specific backup file
 #
 # Environment variables (loaded from $DEPLOY_DIR/.env if present):
 #   DEPLOY_DIR      Base directory on the server (default: /home/deploy/iu-alumni)
