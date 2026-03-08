@@ -1,72 +1,89 @@
 #!/usr/bin/env bash
-# Restore a PostgreSQL backup into the running Docker Swarm postgres container.
+# scripts/restore-db.sh - Restore a PostgreSQL backup into the running stack
 #
 # Usage:
-#   ./restore-db.sh                          # interactive: picks latest backup
-#   ./restore-db.sh <path-to-backup.sql.gz>  # use a specific backup file
+#   restore-db.sh              — interactive: list backups and prompt for choice
+#   restore-db.sh <file>       — non-interactive: restore a specific backup file
 #
-# The script reads POSTGRES_USER, POSTGRES_PASSWORD, POSTGRES_DB from
-# $DEPLOY_DIR/.env (default: ~/iu-alumni/.env).
+# Environment variables (loaded from $DEPLOY_DIR/.env if present):
+#   DEPLOY_DIR      Base directory on the server (default: /home/deploy/iu-alumni)
+#   POSTGRES_USER   Database superuser (required)
+#   POSTGRES_DB     Database name to restore into (required)
 
 set -euo pipefail
 
-DEPLOY_DIR="${DEPLOY_DIR:-$HOME/iu-alumni}"
-ENV_FILE="$DEPLOY_DIR/.env"
+DEPLOY_DIR="${DEPLOY_DIR:-/home/deploy/iu-alumni}"
 BACKUP_DIR="$DEPLOY_DIR/data/backups"
+ENV_FILE="$DEPLOY_DIR/.env"
+STACK_NAME="iu_alumni_infra"
 
-# ── Load env vars ────────────────────────────────────────────────────────────
-if [[ -f "$ENV_FILE" ]]; then
-  # shellcheck disable=SC1090
-  set -a; source "$ENV_FILE"; set +a
+# ── Load environment ─────────────────────────────────────────────────────────
+if [ -f "$ENV_FILE" ]; then
+    # shellcheck source=/dev/null
+    set -a && . "$ENV_FILE" && set +a
 fi
 
-: "${POSTGRES_USER:?POSTGRES_USER not set}"
-: "${POSTGRES_PASSWORD:?POSTGRES_PASSWORD not set}"
-: "${POSTGRES_DB:?POSTGRES_DB not set}"
+POSTGRES_USER="${POSTGRES_USER:?POSTGRES_USER must be set in $ENV_FILE}"
+POSTGRES_DB="${POSTGRES_DB:?POSTGRES_DB must be set in $ENV_FILE}"
+POSTGRES_PASSWORD="${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set in $ENV_FILE}"
 
-# ── Pick backup file ─────────────────────────────────────────────────────────
+log()  { echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*"; }
+die()  { echo "Error: $*" >&2; exit 1; }
+
+# ── Resolve the backup file ──────────────────────────────────────────────────
+
 if [[ $# -ge 1 ]]; then
-  BACKUP_FILE="$1"
+    # Non-interactive: file path passed directly
+    BACKUP_FILE="$1"
 else
-  echo "Available backups (newest first):"
-  ls -lt "$BACKUP_DIR"/*.sql.gz 2>/dev/null | awk '{print NR". "$NF}' || {
-    echo "No backups found in $BACKUP_DIR"
-    exit 1
-  }
-  echo
-  read -rp "Enter number (or full path): " CHOICE
-  if [[ "$CHOICE" =~ ^[0-9]+$ ]]; then
-    BACKUP_FILE=$(ls -t "$BACKUP_DIR"/*.sql.gz | sed -n "${CHOICE}p")
-  else
-    BACKUP_FILE="$CHOICE"
-  fi
+    # Interactive: list available backups and let the user choose
+    mapfile -t BACKUPS < <(find "$BACKUP_DIR" -maxdepth 3 -name "*.sql.gz" | sort -r)
+
+    if [[ ${#BACKUPS[@]} -eq 0 ]]; then
+        die "No backup files found in $BACKUP_DIR"
+    fi
+
+    echo "Available backups:"
+    for i in "${!BACKUPS[@]}"; do
+        printf "  %3d) %s\n" "$((i + 1))" "$(basename "${BACKUPS[$i]}")"
+    done
+    echo
+
+    read -rp "Enter selection (1-${#BACKUPS[@]}): " CHOICE
+
+    # Validate: must be an integer in range
+    if ! [[ "$CHOICE" =~ ^[0-9]+$ ]] || (( CHOICE < 1 || CHOICE > ${#BACKUPS[@]} )); then
+        die "Invalid selection: $CHOICE (must be between 1 and ${#BACKUPS[@]})"
+    fi
+
+    BACKUP_FILE="${BACKUPS[$((CHOICE - 1))]}"
 fi
 
-[[ -f "$BACKUP_FILE" ]] || { echo "File not found: $BACKUP_FILE"; exit 1; }
+# ── Validate file exists ─────────────────────────────────────────────────────
 
-# ── Find postgres container ──────────────────────────────────────────────────
-CONTAINER=$(docker ps --filter name=postgres --format '{{.Names}}' | head -1)
-[[ -n "$CONTAINER" ]] || { echo "No running postgres container found"; exit 1; }
+[[ -f "$BACKUP_FILE" ]] || die "File not found: $BACKUP_FILE"
 
-echo "Backup file : $BACKUP_FILE"
-echo "Container   : $CONTAINER"
-echo "Database    : $POSTGRES_DB"
+# ── Confirm before restoring ─────────────────────────────────────────────────
+
+log "Selected backup: $(basename "$BACKUP_FILE")"
 echo
-read -rp "This will DROP and recreate '$POSTGRES_DB'. Continue? [y/N] " CONFIRM
-[[ "${CONFIRM,,}" == "y" ]] || { echo "Aborted."; exit 0; }
-
-# ── Drop & recreate database ─────────────────────────────────────────────────
-echo "Dropping and recreating database..."
-docker exec -e PGPASSWORD="$POSTGRES_PASSWORD" "$CONTAINER" \
-  psql -U "$POSTGRES_USER" -d postgres \
-  -c "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname='$POSTGRES_DB' AND pid <> pg_backend_pid();" \
-  -c "DROP DATABASE IF EXISTS \"$POSTGRES_DB\";" \
-  -c "CREATE DATABASE \"$POSTGRES_DB\";"
+echo "WARNING: This will DROP and recreate the '$POSTGRES_DB' database."
+read -rp "Type 'yes' to continue: " CONFIRM
+[[ "$CONFIRM" == "yes" ]] || { echo "Aborted."; exit 0; }
 
 # ── Restore ──────────────────────────────────────────────────────────────────
-echo "Restoring backup..."
-gunzip -c "$BACKUP_FILE" | \
-  docker exec -i -e PGPASSWORD="$POSTGRES_PASSWORD" "$CONTAINER" \
+
+POSTGRES_CONTAINER=$(docker ps --filter "name=${STACK_NAME}_postgres" --format "{{.ID}}" | head -1)
+[[ -n "$POSTGRES_CONTAINER" ]] || die "Postgres container not found — is the stack running?"
+
+log "Dropping and recreating database '$POSTGRES_DB'..."
+docker exec -i "$POSTGRES_CONTAINER" \
+    psql -U "$POSTGRES_USER" -c "DROP DATABASE IF EXISTS \"$POSTGRES_DB\";"
+docker exec -i "$POSTGRES_CONTAINER" \
+    psql -U "$POSTGRES_USER" -c "CREATE DATABASE \"$POSTGRES_DB\";"
+
+log "Restoring from $(basename "$BACKUP_FILE")..."
+gunzip -c "$BACKUP_FILE" | docker exec -i "$POSTGRES_CONTAINER" \
     psql -U "$POSTGRES_USER" -d "$POSTGRES_DB"
 
-echo "Restore complete."
+log "Restore complete."
