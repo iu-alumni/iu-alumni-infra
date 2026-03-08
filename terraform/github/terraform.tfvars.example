@@ -51,6 +51,10 @@ testing_mini_app_url   = "https://alumni-test.example.com"
 testing_grafana_user     = "admin"
 testing_grafana_password = "changeme"
 
+# Auth
+testing_login_code_expiry_minutes     = "10"
+testing_password_reset_expiry_minutes = "30"
+
 # Mobile
 testing_api_base_url    = "https://api.alumni-test.example.com"
 testing_app_metrica_key = ""
@@ -102,6 +106,10 @@ production_mini_app_url   = "https://alumni.example.com"
 # Grafana
 production_grafana_user     = "admin"
 production_grafana_password = "changeme"
+
+# Auth
+production_login_code_expiry_minutes     = "10"
+production_password_reset_expiry_minutes = "30"
 
 # Mobile
 production_api_base_url    = "https://api.alumni.example.com"
