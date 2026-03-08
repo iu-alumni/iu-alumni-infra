@@ -50,7 +50,6 @@ jobs:
             -e "ghcr_user=${{ github.actor }}" \
             -e "deploy_dir=${{ secrets.DEPLOY_DIR }}" \
             -e "domain=${{ secrets.DOMAIN }}" \
-            -e "environment=${{ secrets.ENVIRONMENT }}" \
             -e "certbot_email=${{ secrets.CERTBOT_EMAIL }}" \
             -e "postgres_password=${{ secrets.POSTGRES_PASSWORD }}" \
             -e "postgres_user=${{ secrets.POSTGRES_USER }}" \
@@ -128,7 +127,6 @@ jobs:
             -e "ghcr_user=${{ github.actor }}" \
             -e "deploy_dir=${{ secrets.DEPLOY_DIR }}" \
             -e "domain=${{ secrets.DOMAIN }}" \
-            -e "environment=${{ secrets.ENVIRONMENT }}" \
             -e "certbot_email=${{ secrets.CERTBOT_EMAIL }}" \
             -e "postgres_password=${{ secrets.POSTGRES_PASSWORD }}" \
             -e "postgres_user=${{ secrets.POSTGRES_USER }}" \
