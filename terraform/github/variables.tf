@@ -53,9 +53,8 @@ variable "testing_email_hash_secret" {
   sensitive = true
 }
 variable "testing_cors_origins" {
-  description = "Comma-separated list of allowed CORS origins. Defaults to https://<testing_domain>."
-  type    = string
-  default = null
+  description = "Comma-separated list of allowed CORS origins for the testing environment."
+  type        = string
 }
 
 # Mail
@@ -149,9 +148,8 @@ variable "production_email_hash_secret" {
   sensitive = true
 }
 variable "production_cors_origins" {
-  description = "Comma-separated list of allowed CORS origins. Defaults to https://<production_domain>."
-  type    = string
-  default = null
+  description = "Comma-separated list of allowed CORS origins for the production environment."
+  type        = string
 }
 
 # Mail
