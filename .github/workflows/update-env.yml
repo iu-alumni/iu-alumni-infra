@@ -1,0 +1,127 @@
+name: Update Server .env
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Target environment'
+        required: true
+        type: choice
+        options:
+          - testing
+          - production
+
+jobs:
+  update-env-testing:
+    if: github.event.inputs.environment == 'testing'
+    runs-on: ubuntu-latest
+    environment: testing
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install Ansible
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ansible
+
+      - name: Write SSH key
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "${{ secrets.SERVER_SSH_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H "${{ secrets.SERVER_HOST }}" >> ~/.ssh/known_hosts 2>/dev/null || true
+
+      - name: Write .env on server
+        working-directory: ansible
+        env:
+          ANSIBLE_HOST_KEY_CHECKING: "false"
+        run: |
+          ansible-playbook playbooks/setup-server.yml \
+            --limit testing \
+            --tags env \
+            -e "server_ip=${{ secrets.SERVER_HOST }}" \
+            -e "server_user=${{ secrets.SERVER_USER }}" \
+            -e "ghcr_user=${{ github.actor }}" \
+            -e "deploy_dir=${{ secrets.DEPLOY_DIR }}" \
+            -e "domain=${{ secrets.DOMAIN }}" \
+            -e "certbot_email=${{ secrets.CERTBOT_EMAIL }}" \
+            -e "postgres_password=${{ secrets.POSTGRES_PASSWORD }}" \
+            -e "postgres_user=${{ secrets.POSTGRES_USER }}" \
+            -e "postgres_db=${{ secrets.POSTGRES_DB }}" \
+            -e "secret_key=${{ secrets.SECRET_KEY }}" \
+            -e "admin_email=${{ secrets.ADMIN_EMAIL }}" \
+            -e "admin_password=${{ secrets.ADMIN_PASSWORD }}" \
+            -e "email_hash_secret=${{ secrets.EMAIL_HASH_SECRET }}" \
+            -e "mail_username=${{ secrets.MAIL_USERNAME }}" \
+            -e "mail_password=${{ secrets.MAIL_PASSWORD }}" \
+            -e "mail_from=${{ secrets.MAIL_FROM }}" \
+            -e "mail_from_name=${{ secrets.MAIL_FROM_NAME }}" \
+            -e "mail_server=${{ secrets.MAIL_SERVER }}" \
+            -e "mail_port=${{ secrets.MAIL_PORT }}" \
+            -e "telegram_token=${{ secrets.TELEGRAM_TOKEN }}" \
+            -e "admin_chat_id=${{ secrets.ADMIN_CHAT_ID }}" \
+            -e "mini_app_url=${{ secrets.MINI_APP_URL }}" \
+            -e "grafana_user=${{ secrets.GRAFANA_USER }}" \
+            -e "grafana_password=${{ secrets.GRAFANA_PASSWORD }}" \
+            -e "app_environment=${{ secrets.ENVIRONMENT }}" \
+            -e "cors_origins=${{ secrets.CORS_ORIGINS }}" \
+            -e "login_code_expiry_minutes=${{ secrets.LOGIN_CODE_EXPIRY_MINUTES }}" \
+            -e "password_reset_expiry_minutes=${{ secrets.PASSWORD_RESET_EXPIRY_MINUTES }}" \
+            --private-key ~/.ssh/deploy_key
+
+  update-env-production:
+    if: github.event.inputs.environment == 'production'
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install Ansible
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ansible
+
+      - name: Write SSH key
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "${{ secrets.SERVER_SSH_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H "${{ secrets.SERVER_HOST }}" >> ~/.ssh/known_hosts 2>/dev/null || true
+
+      - name: Write .env on server
+        working-directory: ansible
+        env:
+          ANSIBLE_HOST_KEY_CHECKING: "false"
+        run: |
+          ansible-playbook playbooks/setup-server.yml \
+            --limit production \
+            --tags env \
+            -e "server_ip=${{ secrets.SERVER_HOST }}" \
+            -e "server_user=${{ secrets.SERVER_USER }}" \
+            -e "ghcr_user=${{ github.actor }}" \
+            -e "deploy_dir=${{ secrets.DEPLOY_DIR }}" \
+            -e "domain=${{ secrets.DOMAIN }}" \
+            -e "certbot_email=${{ secrets.CERTBOT_EMAIL }}" \
+            -e "postgres_password=${{ secrets.POSTGRES_PASSWORD }}" \
+            -e "postgres_user=${{ secrets.POSTGRES_USER }}" \
+            -e "postgres_db=${{ secrets.POSTGRES_DB }}" \
+            -e "secret_key=${{ secrets.SECRET_KEY }}" \
+            -e "admin_email=${{ secrets.ADMIN_EMAIL }}" \
+            -e "admin_password=${{ secrets.ADMIN_PASSWORD }}" \
+            -e "email_hash_secret=${{ secrets.EMAIL_HASH_SECRET }}" \
+            -e "mail_username=${{ secrets.MAIL_USERNAME }}" \
+            -e "mail_password=${{ secrets.MAIL_PASSWORD }}" \
+            -e "mail_from=${{ secrets.MAIL_FROM }}" \
+            -e "mail_from_name=${{ secrets.MAIL_FROM_NAME }}" \
+            -e "mail_server=${{ secrets.MAIL_SERVER }}" \
+            -e "mail_port=${{ secrets.MAIL_PORT }}" \
+            -e "telegram_token=${{ secrets.TELEGRAM_TOKEN }}" \
+            -e "admin_chat_id=${{ secrets.ADMIN_CHAT_ID }}" \
+            -e "mini_app_url=${{ secrets.MINI_APP_URL }}" \
+            -e "grafana_user=${{ secrets.GRAFANA_USER }}" \
+            -e "grafana_password=${{ secrets.GRAFANA_PASSWORD }}" \
+            -e "app_environment=${{ secrets.ENVIRONMENT }}" \
+            -e "cors_origins=${{ secrets.CORS_ORIGINS }}" \
+            -e "login_code_expiry_minutes=${{ secrets.LOGIN_CODE_EXPIRY_MINUTES }}" \
+            -e "password_reset_expiry_minutes=${{ secrets.PASSWORD_RESET_EXPIRY_MINUTES }}" \
+            --private-key ~/.ssh/deploy_key

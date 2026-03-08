@@ -236,6 +236,7 @@
         group: "{{ ansible_user }}"
         mode: "0600"
       no_log: true
+      tags: [env]
 
     # ── Login to GHCR ────────────────────────────────────
 
