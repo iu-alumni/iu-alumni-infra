@@ -1,0 +1,126 @@
+name: Mobile CI/CD
+
+# Centralized CI/CD for iu-alumni-mobile (Flutter web app).
+#
+# Triggers:
+#   - workflow_dispatch: manual run from the infra repo Actions UI.
+#   - repository_dispatch (type: mobile-deploy): triggered programmatically
+#     from the mobile repo (e.g. on push to main or a PR).
+#
+# The workflow checks out iu-alumni-mobile, builds a Flutter web Docker image
+# with the correct --dart-define secrets baked in, pushes it to GHCR, then
+# deploys via SSH using the shared deploy-app reusable workflow.
+#
+# Required secrets (per environment):
+#   SERVER_HOST, SERVER_USER, SERVER_SSH_KEY  — SSH access to deploy server
+#   API_BASE_URL    — Backend URL baked into the Flutter web build
+#   APP_METRICA_KEY — AppMetrica analytics key
+#   IU_ALUMNI_WEB_SALT — Web storage encryption salt
+#   GHCR_TOKEN      — PAT with packages:write on iu-alumni-mobile (cross-repo push)
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Target environment'
+        required: true
+        type: choice
+        options: [testing, production]
+      ref:
+        description: 'Branch or commit SHA to build (default: main)'
+        required: false
+        default: 'main'
+
+  repository_dispatch:
+    types: [mobile-deploy]
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_REPO: iu-alumni/iu-alumni-mobile
+
+jobs:
+  # ── Resolve inputs from either trigger ────────────────────────────────────
+  resolve:
+    runs-on: ubuntu-latest
+    outputs:
+      environment: ${{ steps.vars.outputs.environment }}
+      ref: ${{ steps.vars.outputs.ref }}
+    steps:
+      - name: Resolve trigger inputs
+        id: vars
+        run: |
+          if [ "${{ github.event_name }}" = "repository_dispatch" ]; then
+            echo "environment=${{ github.event.client_payload.environment }}" >> $GITHUB_OUTPUT
+            echo "ref=${{ github.event.client_payload.ref }}"                 >> $GITHUB_OUTPUT
+          else
+            echo "environment=${{ inputs.environment }}"                      >> $GITHUB_OUTPUT
+            echo "ref=${{ inputs.ref || 'main' }}"                            >> $GITHUB_OUTPUT
+          fi
+
+  # ── Build & push Docker image ──────────────────────────────────────────────
+  build:
+    needs: resolve
+    runs-on: ubuntu-latest
+    environment: ${{ needs.resolve.outputs.environment }}
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      image_tag: ${{ steps.meta.outputs.image_tag }}
+
+    steps:
+      - name: Check out mobile repo
+        uses: actions/checkout@v4
+        with:
+          repository: iu-alumni/iu-alumni-mobile
+          ref: ${{ needs.resolve.outputs.ref }}
+          token: ${{ secrets.GHCR_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Log in to Container Registry
+        uses: docker/login-action@v2
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GHCR_TOKEN }}
+
+      - name: Set image tag
+        id: meta
+        run: |
+          SHA=$(git rev-parse --short HEAD)
+          ENV=${{ needs.resolve.outputs.environment }}
+          SUFFIX=$([ "$ENV" = "testing" ] && echo "-test" || echo "")
+          echo "image_tag=${{ env.REGISTRY }}/${{ env.IMAGE_REPO }}:${SHA}${SUFFIX}" >> $GITHUB_OUTPUT
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          push: true
+          build-args: |
+            API_BASE_URL=${{ secrets.API_BASE_URL }}
+            APP_METRICA_KEY=${{ secrets.APP_METRICA_KEY }}
+            IU_ALUMNI_WEB_SALT=${{ secrets.IU_ALUMNI_WEB_SALT }}
+          tags: |
+            ${{ steps.meta.outputs.image_tag }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_REPO }}:latest${{ needs.resolve.outputs.environment == 'testing' && '-test' || '' }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # ── Deploy ─────────────────────────────────────────────────────────────────
+  deploy:
+    needs: [resolve, build]
+    uses: iu-alumni/iu-alumni-infra/.github/workflows/deploy-app.yml@main
+    with:
+      repo_name: iu-alumni-mobile
+      stack_name: iu_alumni_mobile
+      image_var: MOBILE_IMAGE
+      image_tag: ${{ needs.build.outputs.image_tag }}
+      branch: ${{ needs.resolve.outputs.ref }}
+      environment: ${{ needs.resolve.outputs.environment }}
+    secrets:
+      SERVER_HOST: ${{ secrets.SERVER_HOST }}
+      SERVER_USER: ${{ secrets.SERVER_USER }}
+      SERVER_SSH_KEY: ${{ secrets.SERVER_SSH_KEY }}
