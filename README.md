@@ -25,7 +25,7 @@ nginx resolves service names via Docker DNS at request time — it starts even i
 ## Environments
 
 | Environment | Branch  | GitHub Environment |
-|-------------|---------|--------------------|
+| ----------- | ------- | ------------------ |
 | Testing     | develop | `testing`          |
 | Production  | main    | `production`       |
 
@@ -100,13 +100,13 @@ Deploy each service:
 
 ## Day-to-Day Deployment
 
-| Action | How |
-|--------|-----|
-| Deploy backend | Push to `develop` or `main` |
-| Deploy frontend | Push to `develop` or `main` |
-| Deploy mobile | Push to `develop` or `main` in the mobile repo |
-| Redeploy infra | Push changes to `ansible/` or `docker/` in this repo, or trigger manually |
-| Update server config | Change a GitHub secret → re-run Setup Server workflow |
+| Action               | How                                                                       |
+| -------------------- | ------------------------------------------------------------------------- |
+| Deploy backend       | Push to `develop` or `main`                                               |
+| Deploy frontend      | Push to `develop` or `main`                                               |
+| Deploy mobile        | Push to `develop` or `main` in the mobile repo                            |
+| Redeploy infra       | Push changes to `ansible/` or `docker/` in this repo, or trigger manually |
+| Update server config | Change a GitHub secret → re-run Setup Server workflow                     |
 
 ---
 
@@ -128,47 +128,74 @@ All secrets are set in **GitHub → Settings → Environments** (separate values
 
 ### Infrastructure & SSH (all repos)
 
-| Secret | Description |
-|--------|-------------|
-| `SERVER_HOST` | Server IP or hostname |
-| `SERVER_USER` | SSH username (e.g. `deploy`) |
-| `SERVER_SSH_KEY` | SSH private key (PEM) |
+| Secret           | Description                  |
+| ---------------- | ---------------------------- |
+| `SERVER_HOST`    | Server IP or hostname        |
+| `SERVER_USER`    | SSH username (e.g. `deploy`) |
+| `SERVER_SSH_KEY` | SSH private key (PEM)        |
 
 ### Server Configuration (iu-alumni-infra only)
 
 Written to the server's `.env` by Ansible — no manual file editing needed.
 
-| Secret | Description |
-|--------|-------------|
-| `DOMAIN` | Base domain, no scheme (e.g. `alumni.example.com`) |
-| `CERTBOT_EMAIL` | Email for Let's Encrypt notifications |
-| `POSTGRES_PASSWORD` | PostgreSQL superuser password |
-| `POSTGRES_DB` | Database name (default: `iu_alumni_db`) |
-| `SECRET_KEY` | JWT signing secret |
-| `ADMIN_EMAIL` | Initial admin account email |
-| `ADMIN_PASSWORD` | Initial admin account password |
-| `EMAIL_HASH_SECRET` | Secret for hashing emails |
-| `MAIL_USERNAME` | SMTP username |
-| `MAIL_PASSWORD` | SMTP password |
-| `MAIL_FROM` | From address for outbound email |
-| `MAIL_SERVER` | SMTP host (default: `smtp.gmail.com`) |
-| `MAIL_PORT` | SMTP port (default: `587`) |
-| `TELEGRAM_TOKEN` | Telegram bot token |
-| `ADMIN_CHAT_ID` | Telegram admin group chat ID |
-| `GRAFANA_USER` | Grafana admin username |
-| `GRAFANA_PASSWORD` | Grafana admin password |
+| Secret              | Description                                        |
+| ------------------- | -------------------------------------------------- |
+| `DOMAIN`            | Base domain, no scheme (e.g. `alumni.example.com`) |
+| `CERTBOT_EMAIL`     | Email for Let's Encrypt notifications              |
+| `POSTGRES_PASSWORD` | PostgreSQL superuser password                      |
+| `POSTGRES_DB`       | Database name (default: `iu_alumni_db`)            |
+| `SECRET_KEY`        | JWT signing secret                                 |
+| `ADMIN_EMAIL`       | Initial admin account email                        |
+| `ADMIN_PASSWORD`    | Initial admin account password                     |
+| `EMAIL_HASH_SECRET` | Secret for hashing emails                          |
+| `MAIL_USERNAME`     | SMTP username                                      |
+| `MAIL_PASSWORD`     | SMTP password                                      |
+| `MAIL_FROM`         | From address for outbound email                    |
+| `MAIL_SERVER`       | SMTP host (default: `smtp.gmail.com`)              |
+| `MAIL_PORT`         | SMTP port (default: `587`)                         |
+| `TELEGRAM_TOKEN`    | Telegram bot token                                 |
+| `ADMIN_CHAT_ID`     | Telegram admin group chat ID                       |
+| `GRAFANA_USER`      | Grafana admin username                             |
+| `GRAFANA_PASSWORD`  | Grafana admin password                             |
 
 ### Mobile (iu-alumni-mobile only)
 
-| Secret | Description |
-|--------|-------------|
+| Secret         | Description                                                                    |
+| -------------- | ------------------------------------------------------------------------------ |
 | `API_BASE_URL` | Full API URL baked into Flutter binary (e.g. `https://api.alumni.example.com`) |
 
 ---
 
 ## Local Development
 
-Start shared services (PostgreSQL):
+### Full-stack web testing without mobile app
+
+**full-stack compose:** starts PostgreSQL, the backend, and the frontend together. The flutter mobile app should still run separately.
+
+To use, run:
+
+```bash
+cd docker
+docker compose -f docker-compose.full-stack.yml up --build
+```
+
+IMPORTANT: The compose file reads `docker/.env` for local defaults, it should be created beforehand.
+
+Access:
+
+- Backend API: `http://localhost:8080`
+- Frontend app: `http://localhost:3001`
+
+Then run the mobile app locally:
+
+```bash
+cd ../iu-alumni-mobile
+flutter run -d chrome --dart-define=API_BASE_URL=http://localhost:8080
+```
+
+### Shared service stack only (PostgreSQL)
+
+If you still want to run only the local shared services stack, use:
 
 ```bash
 cd docker
@@ -179,13 +206,13 @@ Then run each app locally:
 
 ```bash
 # Backend
-cd iu-alumni-backend && docker compose up
+cd ../iu-alumni-backend && docker compose up
 
 # Frontend
-cd iu-alumni-frontend && pnpm dev
+cd ../iu-alumni-frontend && pnpm dev
 
 # Mobile (web)
-cd iu-alumni-mobile && flutter run -d chrome --dart-define=API_BASE_URL=http://localhost:8080
+cd ../iu-alumni-mobile && flutter run -d chrome --dart-define=API_BASE_URL=http://localhost:8080
 ```
 
 ---
