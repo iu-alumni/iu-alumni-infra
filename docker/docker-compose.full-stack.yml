@@ -69,6 +69,7 @@ services:
       NUXT_PUBLIC_API_BASE: ${NUXT_PUBLIC_API_BASE:-http://backend:8080}
       NUXT_HOST: 0.0.0.0
       NUXT_PORT: ${FRONTEND_PORT:-3000}
+      NITRO_UNIX_SOCKET: "false"
       CHOKIDAR_USEPOLLING: "true"
     ports:
       - "${LOCAL_FRONTEND_PORT:-3001}:3000"
