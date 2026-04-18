@@ -27,8 +27,8 @@ jobs:
       - name: Write SSH key
         run: |
           mkdir -p ~/.ssh
-          printf '%s\n' "${{ secrets.SERVER_SSH_KEY }}" > ~/.ssh/deploy_key
-          chmod 600 ~/.ssh/deploy_key
+          printf '%s\n' "${{ secrets.SERVER_SSH_KEY }}" > ~/.ssh/deploy
+          chmod 600 ~/.ssh/deploy
           ssh-keyscan -H "${{ secrets.SERVER_HOST }}" >> ~/.ssh/known_hosts 2>/dev/null || true
 
       - name: Write .env on server
@@ -67,7 +67,7 @@ jobs:
             -e "cors_origins=${{ secrets.CORS_ORIGINS }}" \
             -e "login_code_expiry_minutes=${{ secrets.LOGIN_CODE_EXPIRY_MINUTES }}" \
             -e "password_reset_expiry_minutes=${{ secrets.PASSWORD_RESET_EXPIRY_MINUTES }}" \
-            --private-key ~/.ssh/deploy_key
+            --private-key ~/.ssh/deploy
 
   update-env-production:
     if: github.event.inputs.environment == 'production'
@@ -84,8 +84,8 @@ jobs:
       - name: Write SSH key
         run: |
           mkdir -p ~/.ssh
-          printf '%s\n' "${{ secrets.SERVER_SSH_KEY }}" > ~/.ssh/deploy_key
-          chmod 600 ~/.ssh/deploy_key
+          printf '%s\n' "${{ secrets.SERVER_SSH_KEY }}" > ~/.ssh/deploy
+          chmod 600 ~/.ssh/deploy
           ssh-keyscan -H "${{ secrets.SERVER_HOST }}" >> ~/.ssh/known_hosts 2>/dev/null || true
 
       - name: Write .env on server
@@ -124,4 +124,4 @@ jobs:
             -e "cors_origins=${{ secrets.CORS_ORIGINS }}" \
             -e "login_code_expiry_minutes=${{ secrets.LOGIN_CODE_EXPIRY_MINUTES }}" \
             -e "password_reset_expiry_minutes=${{ secrets.PASSWORD_RESET_EXPIRY_MINUTES }}" \
-            --private-key ~/.ssh/deploy_key
+            --private-key ~/.ssh/deploy

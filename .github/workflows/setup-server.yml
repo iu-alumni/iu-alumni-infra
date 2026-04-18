@@ -21,22 +21,10 @@ on:
 jobs:
   setup-testing:
     if: github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'testing'
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux]
     environment: testing
     steps:
       - uses: actions/checkout@v6
-
-      - name: Install Ansible
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y ansible
-
-      - name: Write SSH key
-        run: |
-          mkdir -p ~/.ssh
-          printf '%s\n' "${{ secrets.SERVER_SSH_KEY }}" > ~/.ssh/deploy_key
-          chmod 600 ~/.ssh/deploy_key
-          ssh-keyscan -H "${{ secrets.SERVER_HOST }}" >> ~/.ssh/known_hosts 2>/dev/null || true
 
       - name: Run setup-server playbook
         working-directory: ansible
@@ -73,7 +61,7 @@ jobs:
             -e "cors_origins=${{ secrets.CORS_ORIGINS }}" \
             -e "login_code_expiry_minutes=${{ secrets.LOGIN_CODE_EXPIRY_MINUTES }}" \
             -e "password_reset_expiry_minutes=${{ secrets.PASSWORD_RESET_EXPIRY_MINUTES }}" \
-            --private-key ~/.ssh/deploy_key
+            --private-key /home/deploy/.ssh/deploy
 
       - name: Bootstrap infrastructure (first deploy + SSL)
         uses: appleboy/ssh-action@v1
@@ -101,22 +89,10 @@ jobs:
     if: >
       (github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'production') ||
       (github.event_name == 'push' && github.ref == 'refs/heads/main')
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux]
     environment: production
     steps:
       - uses: actions/checkout@v6
-
-      - name: Install Ansible
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y ansible
-
-      - name: Write SSH key
-        run: |
-          mkdir -p ~/.ssh
-          printf '%s\n' "${{ secrets.SERVER_SSH_KEY }}" > ~/.ssh/deploy_key
-          chmod 600 ~/.ssh/deploy_key
-          ssh-keyscan -H "${{ secrets.SERVER_HOST }}" >> ~/.ssh/known_hosts 2>/dev/null || true
 
       - name: Run setup-server playbook
         working-directory: ansible
@@ -153,7 +129,7 @@ jobs:
             -e "cors_origins=${{ secrets.CORS_ORIGINS }}" \
             -e "login_code_expiry_minutes=${{ secrets.LOGIN_CODE_EXPIRY_MINUTES }}" \
             -e "password_reset_expiry_minutes=${{ secrets.PASSWORD_RESET_EXPIRY_MINUTES }}" \
-            --private-key ~/.ssh/deploy_key
+            --private-key /home/deploy/.ssh/deploy
 
       - name: Bootstrap infrastructure (first deploy + SSL)
         uses: appleboy/ssh-action@v1
