@@ -11,13 +11,13 @@ locals {
   }
 
   # CI check names (job names) that must pass before merging.
-  # These match the job IDs in each repo's deploy.yml workflow.
+  # These match the emitted GitHub Actions check contexts per repository.
   # Reusable workflows report checks as "{parent-job} / {called-job}".
   required_checks = {
-    backend  = ["build-image", "deploy-testing / deploy"]
-    frontend = ["build-image", "deploy-testing / deploy"]
-    mobile   = ["build-testing", "deploy-testing / deploy"]
-    infra    = ["deploy-testing / deploy"]
+    backend  = ["validate", "build-image", "deploy-testing / deploy"]
+    frontend = ["validate", "build-image", "deploy-testing / deploy"]
+    mobile   = ["validate", "build-image", "deploy-testing / deploy"]
+    infra    = ["validate"]
   }
 }
 
@@ -43,17 +43,17 @@ import {
 resource "github_repository" "repos" {
   for_each = local.repos
 
-  name                   = each.value
-  visibility             = "public"
-  has_issues             = true
-  has_projects           = false
-  has_wiki               = false
-  allow_merge_commit     = false
-  allow_squash_merge     = true
-  allow_rebase_merge     = false
+  name                        = each.value
+  visibility                  = "public"
+  has_issues                  = true
+  has_projects                = false
+  has_wiki                    = false
+  allow_merge_commit          = false
+  allow_squash_merge          = true
+  allow_rebase_merge          = false
   squash_merge_commit_title   = "PR_TITLE"
   squash_merge_commit_message = "PR_BODY"
-  delete_branch_on_merge = true
+  delete_branch_on_merge      = true
 
   # Prevent accidental deletion via Terraform
   lifecycle {
@@ -77,10 +77,10 @@ resource "github_branch_protection" "main" {
   }
 
   required_pull_request_reviews {
-    required_approving_review_count  = 0
-    dismiss_stale_reviews            = true
-    require_code_owner_reviews       = false
-    require_last_push_approval       = false
+    required_approving_review_count = 0
+    dismiss_stale_reviews           = true
+    require_code_owner_reviews      = false
+    require_last_push_approval      = false
   }
 
   enforce_admins                  = false
@@ -88,5 +88,4 @@ resource "github_branch_protection" "main" {
   allows_force_pushes             = false
   require_conversation_resolution = true
 }
-
 
