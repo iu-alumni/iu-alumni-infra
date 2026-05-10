@@ -114,16 +114,14 @@
 
     # ── Zsh + Oh My Zsh ─────────────────────────────────
     - name: Install Oh My Zsh for deploy user
-      become: true
-      become_user: "{{ ansible_user }}"
+      become: false
       ansible.builtin.shell: |
         sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended
       args:
         creates: "/home/{{ ansible_user }}/.oh-my-zsh"
 
     - name: Clone Zsh plugins
-      become: true
-      become_user: "{{ ansible_user }}"
+      become: false
       ansible.builtin.git:
         repo: "{{ item.repo }}"
         dest: "/home/{{ ansible_user }}/.oh-my-zsh/custom/plugins/{{ item.name }}"
@@ -131,8 +129,7 @@
       loop: "{{ zsh_plugins }}"
 
     - name: Configure zshrc
-      become: true
-      become_user: "{{ ansible_user }}"
+      become: false
       ansible.builtin.template:
         src: zshrc.j2
         dest: "/home/{{ ansible_user }}/.zshrc"
