@@ -33,6 +33,17 @@ jobs:
     runs-on: [self-hosted]
     environment: ${{ inputs.environment }}
     steps:
+      - name: Install self-hosted runner tools
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y ansible docker.io openssh-client git
+          if command -v systemctl >/dev/null 2>&1; then
+            sudo systemctl start docker
+          fi
+          ansible-playbook --version
+          docker --version
+
       - name: Deploy via SSH
         uses: appleboy/ssh-action@v1
         with:
