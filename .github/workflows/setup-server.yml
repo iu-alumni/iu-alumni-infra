@@ -21,7 +21,7 @@ on:
 jobs:
   setup-testing:
     if: github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'testing'
-    runs-on: [self-hosted, linux]
+    runs-on: [self-hosted]
     environment: testing
     steps:
       - uses: actions/checkout@v6
@@ -62,7 +62,6 @@ jobs:
             -e "login_code_expiry_minutes=${{ secrets.LOGIN_CODE_EXPIRY_MINUTES }}" \
             -e "password_reset_expiry_minutes=${{ secrets.PASSWORD_RESET_EXPIRY_MINUTES }}" \
             --private-key /home/deploy/.ssh/deploy
-
       - name: Bootstrap infrastructure (first deploy + SSL)
         uses: appleboy/ssh-action@v1
         with:
@@ -89,7 +88,7 @@ jobs:
     if: >
       (github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'production') ||
       (github.event_name == 'push' && github.ref == 'refs/heads/main')
-    runs-on: [self-hosted, linux]
+    runs-on: [self-hosted]
     environment: production
     steps:
       - uses: actions/checkout@v6
@@ -130,7 +129,6 @@ jobs:
             -e "login_code_expiry_minutes=${{ secrets.LOGIN_CODE_EXPIRY_MINUTES }}" \
             -e "password_reset_expiry_minutes=${{ secrets.PASSWORD_RESET_EXPIRY_MINUTES }}" \
             --private-key /home/deploy/.ssh/deploy
-
       - name: Bootstrap infrastructure (first deploy + SSL)
         uses: appleboy/ssh-action@v1
         with:
