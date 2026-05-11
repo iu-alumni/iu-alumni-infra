@@ -30,7 +30,6 @@ CERTBOT_EMAIL="${CERTBOT_EMAIL:-devops@${DOMAIN}}"
 NGINX_CONF_DIR="$DEPLOY_DIR/nginx/conf.d"
 CERTBOT_CONF_DIR="$DEPLOY_DIR/nginx/certbot/conf"
 CERTBOT_WWW_DIR="$DEPLOY_DIR/nginx/certbot/www"
-CERT_DIR="$CERTBOT_CONF_DIR/live/$DOMAIN"
 
 log() { echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*"; }
 
