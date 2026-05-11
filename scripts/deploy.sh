@@ -108,12 +108,15 @@ init_ssl() {
 deploy() {
     ensure_network
 
-    if [ ! -d "$CERT_DIR" ]; then
-        log "No SSL certificates found — running SSL init first..."
-        init_ssl
-    else
-        generate_nginx_config
-    fi
+    # SSL bootstrap is disabled for now because TLS is terminated
+    # by cloud-provider Nginx before traffic reaches this stack.
+    # if [ ! -d "$CERT_DIR" ]; then
+    #     log "No SSL certificates found — running SSL init first..."
+    #     init_ssl
+    # else
+    #     generate_nginx_config
+    # fi
+    generate_nginx_config
 
     # Deploy (or update) the full infrastructure stack
     DEPLOY_DIR="$DEPLOY_DIR" docker stack deploy \
