@@ -35,9 +35,6 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
-      - name: Install self-hosted runner tools
-        uses: ./.github/actions/bootstrap-self-hosted-tools
-
       - name: Deploy via SSH
         uses: appleboy/ssh-action@v1
         with:
