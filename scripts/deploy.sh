@@ -30,7 +30,6 @@ CERTBOT_EMAIL="${CERTBOT_EMAIL:-devops@${DOMAIN}}"
 NGINX_CONF_DIR="$DEPLOY_DIR/nginx/conf.d"
 CERTBOT_CONF_DIR="$DEPLOY_DIR/nginx/certbot/conf"
 CERTBOT_WWW_DIR="$DEPLOY_DIR/nginx/certbot/www"
-CERT_DIR="$CERTBOT_CONF_DIR/live/$DOMAIN"
 
 log() { echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*"; }
 
@@ -108,12 +107,15 @@ init_ssl() {
 deploy() {
     ensure_network
 
-    if [ ! -d "$CERT_DIR" ]; then
-        log "No SSL certificates found — running SSL init first..."
-        init_ssl
-    else
-        generate_nginx_config
-    fi
+    # SSL bootstrap is disabled for now because TLS is terminated
+    # by cloud-provider Nginx before traffic reaches this stack.
+    # if [ ! -d "$CERT_DIR" ]; then
+    #     log "No SSL certificates found — running SSL init first..."
+    #     init_ssl
+    # else
+    #     generate_nginx_config
+    # fi
+    generate_nginx_config
 
     # Deploy (or update) the full infrastructure stack
     DEPLOY_DIR="$DEPLOY_DIR" docker stack deploy \
