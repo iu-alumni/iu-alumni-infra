@@ -26,9 +26,6 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
-      - name: Install self-hosted runner tools
-        uses: ./.github/actions/bootstrap-self-hosted-tools
-
       - name: Run setup-server playbook
         working-directory: ansible
         env:
@@ -95,9 +92,6 @@ jobs:
     environment: production
     steps:
       - uses: actions/checkout@v6
-
-      - name: Install self-hosted runner tools
-        uses: ./.github/actions/bootstrap-self-hosted-tools
 
       - name: Run setup-server playbook
         working-directory: ansible
