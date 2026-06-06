@@ -46,6 +46,13 @@ services:
       ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@example.com}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:-admin123}
       ENVIRONMENT: DEV
+      MAIL_USERNAME: ${MAIL_USERNAME}
+      MAIL_PASSWORD: ${MAIL_PASSWORD}
+      MAIL_SERVER: ${MAIL_SERVER:-smtp.gmail.com}
+      MAIL_PORT: ${MAIL_PORT:-587}
+      MAIL_FROM: ${MAIL_FROM:-noreply@innopolis.university}
+      MAIL_FROM_NAME: ${MAIL_FROM_NAME:-IU Alumni Platform}
+      BACKEND_URL: ${BACKEND_URL:-http://localhost:8080}
     ports:
       - "8080:8080"
     depends_on:
