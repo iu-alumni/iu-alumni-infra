@@ -9,9 +9,18 @@ runs:
       run: |
         set -euo pipefail
         sudo apt-get update
-        sudo apt-get install -y ansible docker.io openssh-client git
+        sudo apt-get install -y python3-pip python3-venv docker.io openssh-client git
+
+        # Remove distro ansible — too old for Ubuntu 24.04 targets (Python 3.12)
+        sudo apt-get remove -y ansible ansible-core 2>/dev/null || true
+
+        python3 -m pip install --user 'ansible-core>=2.17,<2.20'
+
+        echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
         if command -v systemctl >/dev/null 2>&1; then
           sudo systemctl start docker
         fi
         ansible-playbook --version
+        python3 --version
         docker --version
