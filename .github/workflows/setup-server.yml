@@ -11,13 +11,21 @@ on:
         options:
           - testing
           - production
+      setup_certificates:
+        description: "Obtain Let's Encrypt certificates and enable HTTPS on this server"
+        required: false
+        type: boolean
+        default: false
   push:
     branches: [main]
     paths:
       - 'ansible/playbooks/setup-server.yml'
+      - 'ansible/playbooks/templates/env.j2'
       - 'ansible/inventory.yml'
       - 'ansible/ansible.cfg'
       - 'ansible/requirements.yml'
+      - 'scripts/deploy.sh'
+      - 'nginx/**'
 
 jobs:
   setup-testing:
@@ -47,6 +55,7 @@ jobs:
             -e "deploy_dir=${{ secrets.DEPLOY_DIR }}" \
             -e "domain=${{ secrets.DOMAIN }}" \
             -e "certbot_email=${{ secrets.CERTBOT_EMAIL }}" \
+            -e "setup_certificates=${{ github.event_name == 'workflow_dispatch' && github.event.inputs.setup_certificates || false }}" \
             -e "postgres_password=${{ secrets.POSTGRES_PASSWORD }}" \
             -e "postgres_user=${{ secrets.POSTGRES_USER }}" \
             -e "postgres_db=${{ secrets.POSTGRES_DB }}" \
@@ -70,7 +79,7 @@ jobs:
             -e "login_code_expiry_minutes=${{ secrets.LOGIN_CODE_EXPIRY_MINUTES }}" \
             -e "password_reset_expiry_minutes=${{ secrets.PASSWORD_RESET_EXPIRY_MINUTES }}" \
             --private-key /home/deploy/.ssh/deploy
-      - name: Bootstrap infrastructure (first deploy + SSL)
+      - name: Bootstrap infrastructure (first deploy)
         uses: appleboy/ssh-action@v1
         with:
           host: ${{ secrets.SERVER_HOST }}
@@ -121,6 +130,7 @@ jobs:
             -e "deploy_dir=${{ secrets.DEPLOY_DIR }}" \
             -e "domain=${{ secrets.DOMAIN }}" \
             -e "certbot_email=${{ secrets.CERTBOT_EMAIL }}" \
+            -e "setup_certificates=${{ github.event_name == 'workflow_dispatch' && github.event.inputs.setup_certificates || false }}" \
             -e "postgres_password=${{ secrets.POSTGRES_PASSWORD }}" \
             -e "postgres_user=${{ secrets.POSTGRES_USER }}" \
             -e "postgres_db=${{ secrets.POSTGRES_DB }}" \
@@ -144,7 +154,7 @@ jobs:
             -e "login_code_expiry_minutes=${{ secrets.LOGIN_CODE_EXPIRY_MINUTES }}" \
             -e "password_reset_expiry_minutes=${{ secrets.PASSWORD_RESET_EXPIRY_MINUTES }}" \
             --private-key /home/deploy/.ssh/deploy
-      - name: Bootstrap infrastructure (first deploy + SSL)
+      - name: Bootstrap infrastructure (first deploy)
         uses: appleboy/ssh-action@v1
         with:
           host: ${{ secrets.SERVER_HOST }}
