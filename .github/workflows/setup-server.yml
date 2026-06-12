@@ -17,6 +17,7 @@ on:
       - 'ansible/playbooks/setup-server.yml'
       - 'ansible/inventory.yml'
       - 'ansible/ansible.cfg'
+      - 'ansible/requirements.yml'
 
 jobs:
   setup-testing:
@@ -28,6 +29,10 @@ jobs:
 
       - name: Install self-hosted runner tools
         uses: ./.github/actions/bootstrap-self-hosted-tools
+
+      - name: Install Ansible collections
+        working-directory: ansible
+        run: ansible-galaxy collection install -r requirements.yml
 
       - name: Run setup-server playbook
         working-directory: ansible
@@ -98,6 +103,10 @@ jobs:
 
       - name: Install self-hosted runner tools
         uses: ./.github/actions/bootstrap-self-hosted-tools
+
+      - name: Install Ansible collections
+        working-directory: ansible
+        run: ansible-galaxy collection install -r requirements.yml
 
       - name: Run setup-server playbook
         working-directory: ansible
