@@ -79,6 +79,38 @@ generate_nginx_config() {
 
 # ── SSL bootstrap ────────────────────────────────────────────────────────────
 
+reload_nginx_service() {
+  log "Reloading nginx service to pick up config changes..."
+  docker service update --force "${STACK_NAME}_nginx"
+  log "Waiting for nginx to become ready..."
+  sleep 20
+}
+
+verify_acme_webroot() {
+  local probe="iu-alumni-acme-probe-$$"
+  local probe_dir="$CERTBOT_WWW_DIR/.well-known/acme-challenge"
+  mkdir -p "$probe_dir"
+  echo "$probe" > "$probe_dir/$probe"
+
+  local url="http://${DOMAIN}/.well-known/acme-challenge/${probe}"
+  local code
+  code="$(curl -s -o /dev/null -w '%{http_code}' "$url" || true)"
+
+  rm -f "$probe_dir/$probe"
+
+  if [ "$code" != "200" ]; then
+    log "ERROR: ACME webroot check failed (HTTP $code for $url)"
+    log "Let's Encrypt must reach port 80 on this server for /.well-known/acme-challenge/."
+    log "If a cloud-provider reverse proxy terminates HTTP/HTTPS in front of this VM:"
+    log "  - forward /.well-known/acme-challenge/* to this server unchanged, or"
+    log "  - temporarily disable the proxy on port 80, or"
+    log "  - run setup with setup_certificates=false and keep TLS at the provider."
+    return 1
+  fi
+
+  log "ACME webroot check passed (HTTP 200 for $url)"
+}
+
 init_ssl() {
   log "Bootstrapping SSL certificates for $DOMAIN and subdomains..."
 
@@ -97,8 +129,9 @@ init_ssl() {
   DEPLOY_DIR="$DEPLOY_DIR" docker stack deploy \
     -c "$REPO_DIR/docker/stack.yml" "$STACK_NAME" --with-registry-auth
 
-  log "Waiting for nginx to start..."
-  sleep 15
+  # stack deploy alone does not reload nginx when only mounted config files changed.
+  reload_nginx_service
+  verify_acme_webroot
 
   docker run --rm \
     -v "$CERTBOT_CONF_DIR:/etc/letsencrypt" \
@@ -118,7 +151,7 @@ init_ssl() {
 
   rm -f "$NGINX_CONF_DIR/init.conf"
   SETUP_CERTIFICATES=true generate_nginx_config
-  docker service update --force "${STACK_NAME}_nginx"
+  reload_nginx_service
   log "Nginx reloaded with HTTPS configs"
 }
 
