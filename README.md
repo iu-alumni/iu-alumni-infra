@@ -175,7 +175,7 @@ Written to the server's `.env` by Ansible — no manual file editing needed.
 To use, run:
 
 ```bash
-cd docker
+cd .\iu-alumni-infra\docker 
 docker compose -f docker-compose.full-stack.yml up --build
 ```
 
