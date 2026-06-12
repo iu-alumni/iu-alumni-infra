@@ -16,11 +16,13 @@ runs:
 
         python3 -m pip install --user 'ansible-core>=2.17,<2.20'
 
+        export PATH="$HOME/.local/bin:$PATH"
         echo "$HOME/.local/bin" >> "$GITHUB_PATH"
 
         if command -v systemctl >/dev/null 2>&1; then
           sudo systemctl start docker
         fi
+        command -v ansible-playbook
         ansible-playbook --version
         python3 --version
         docker --version
