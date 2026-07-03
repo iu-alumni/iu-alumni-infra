@@ -164,6 +164,11 @@ Written to the server's `.env` by Ansible — no manual file editing needed.
 | -------------- | ------------------------------------------------------------------------------ |
 | `API_BASE_URL` | Full API URL baked into Flutter binary (e.g. `https://api.alumni.example.com`) |
 
+Mail secrets are rendered into the server `.env` and then shell-sourced during app deploys.
+Store SMTP passwords exactly as issued by the provider, including spaces in Gmail app
+passwords; the setup workflow quotes these values safely. After changing any mail secret,
+re-run `Update Environment` or `Setup Server`, then redeploy the backend.
+
 ---
 
 ## Local Development
