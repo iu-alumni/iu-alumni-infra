@@ -17,7 +17,7 @@ jobs:
     runs-on: ubuntu-latest
     environment: testing
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Install Ansible
         run: |
@@ -74,7 +74,7 @@ jobs:
     runs-on: ubuntu-latest
     environment: production
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Install Ansible
         run: |
