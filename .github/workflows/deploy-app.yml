@@ -65,7 +65,7 @@ jobs:
             if [ "${{ inputs.repo_name }}" = "iu-alumni-backend" ]; then
               missing=""
               for var in MAIL_USERNAME MAIL_PASSWORD MAIL_FROM MAIL_SERVER MAIL_PORT; do
-                eval "value=\${$var:-}"
+                value="$(printenv "$var" 2>/dev/null || true)"
                 if [ -z "$value" ]; then missing="$missing $var"; fi
               done
               if [ -n "$missing" ]; then
