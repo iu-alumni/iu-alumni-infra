@@ -48,7 +48,7 @@ resource "github_actions_environment_secret" "testing_server_host" {
   repository      = each.value
   environment     = github_repository_environment.testing[each.key].environment
   secret_name     = "SERVER_HOST"
-  plaintext_value = var.testing_server_host
+  value = var.testing_server_host
 }
 
 resource "github_actions_environment_secret" "production_server_host" {
@@ -56,7 +56,7 @@ resource "github_actions_environment_secret" "production_server_host" {
   repository      = each.value
   environment     = github_repository_environment.production[each.key].environment
   secret_name     = "SERVER_HOST"
-  plaintext_value = var.production_server_host
+  value = var.production_server_host
 }
 
 resource "github_actions_environment_secret" "testing_server_user" {
@@ -64,7 +64,7 @@ resource "github_actions_environment_secret" "testing_server_user" {
   repository      = each.value
   environment     = github_repository_environment.testing[each.key].environment
   secret_name     = "SERVER_USER"
-  plaintext_value = var.testing_server_user
+  value = var.testing_server_user
 }
 
 resource "github_actions_environment_secret" "production_server_user" {
@@ -72,7 +72,7 @@ resource "github_actions_environment_secret" "production_server_user" {
   repository      = each.value
   environment     = github_repository_environment.production[each.key].environment
   secret_name     = "SERVER_USER"
-  plaintext_value = var.production_server_user
+  value = var.production_server_user
 }
 
 resource "github_actions_environment_secret" "testing_server_ssh_key" {
@@ -80,7 +80,7 @@ resource "github_actions_environment_secret" "testing_server_ssh_key" {
   repository      = each.value
   environment     = github_repository_environment.testing[each.key].environment
   secret_name     = "SERVER_SSH_KEY"
-  plaintext_value = var.testing_server_ssh_key
+  value = var.testing_server_ssh_key
 }
 
 resource "github_actions_environment_secret" "production_server_ssh_key" {
@@ -88,7 +88,7 @@ resource "github_actions_environment_secret" "production_server_ssh_key" {
   repository      = each.value
   environment     = github_repository_environment.production[each.key].environment
   secret_name     = "SERVER_SSH_KEY"
-  plaintext_value = var.production_server_ssh_key
+  value = var.production_server_ssh_key
 }
 
 # ── Infra-specific secrets (server configuration) ────────────────────────────
@@ -186,7 +186,7 @@ resource "github_actions_environment_secret" "infra_testing" {
   repository      = "iu-alumni-infra"
   environment     = github_repository_environment.testing["infra"].environment
   secret_name     = each.key
-  plaintext_value = each.value
+  value = each.value
 }
 
 resource "github_actions_environment_secret" "infra_production" {
@@ -194,7 +194,7 @@ resource "github_actions_environment_secret" "infra_production" {
   repository      = "iu-alumni-infra"
   environment     = github_repository_environment.production["infra"].environment
   secret_name     = each.key
-  plaintext_value = each.value
+  value = each.value
 }
 
 # ── Mobile-specific: API_BASE_URL, APP_METRICA_KEY, IU_ALUMNI_WEB_SALT ───────
@@ -204,41 +204,41 @@ resource "github_actions_environment_secret" "mobile_api_base_url_testing" {
   repository      = "iu-alumni-mobile"
   environment     = github_repository_environment.testing["mobile"].environment
   secret_name     = "API_BASE_URL"
-  plaintext_value = var.testing_api_base_url
+  value = var.testing_api_base_url
 }
 
 resource "github_actions_environment_secret" "mobile_api_base_url_production" {
   repository      = "iu-alumni-mobile"
   environment     = github_repository_environment.production["mobile"].environment
   secret_name     = "API_BASE_URL"
-  plaintext_value = var.production_api_base_url
+  value = var.production_api_base_url
 }
 
 resource "github_actions_environment_secret" "mobile_app_metrica_key_testing" {
   repository      = "iu-alumni-mobile"
   environment     = github_repository_environment.testing["mobile"].environment
   secret_name     = "APP_METRICA_KEY"
-  plaintext_value = var.testing_app_metrica_key
+  value = var.testing_app_metrica_key
 }
 
 resource "github_actions_environment_secret" "mobile_app_metrica_key_production" {
   repository      = "iu-alumni-mobile"
   environment     = github_repository_environment.production["mobile"].environment
   secret_name     = "APP_METRICA_KEY"
-  plaintext_value = var.production_app_metrica_key
+  value = var.production_app_metrica_key
 }
 
 resource "github_actions_environment_secret" "mobile_web_salt_testing" {
   repository      = "iu-alumni-mobile"
   environment     = github_repository_environment.testing["mobile"].environment
   secret_name     = "IU_ALUMNI_WEB_SALT"
-  plaintext_value = var.testing_web_salt
+  value = var.testing_web_salt
 }
 
 resource "github_actions_environment_secret" "mobile_web_salt_production" {
   repository      = "iu-alumni-mobile"
   environment     = github_repository_environment.production["mobile"].environment
   secret_name     = "IU_ALUMNI_WEB_SALT"
-  plaintext_value = var.production_web_salt
+  value = var.production_web_salt
 }
 
