@@ -21,24 +21,6 @@ locals {
   }
 }
 
-# Import existing repositories so Terraform adopts them instead of trying to
-# create them. Safe to re-run — import is a no-op if already in state.
-import {
-  to = github_repository.repos["backend"]
-  id = "iu-alumni-backend"
-}
-import {
-  to = github_repository.repos["frontend"]
-  id = "iu-alumni-frontend"
-}
-import {
-  to = github_repository.repos["mobile"]
-  id = "iu-alumni-mobile"
-}
-import {
-  to = github_repository.repos["infra"]
-  id = "iu-alumni-infra"
-}
 # Common settings applied to every repo
 resource "github_repository" "repos" {
   for_each = local.repos
