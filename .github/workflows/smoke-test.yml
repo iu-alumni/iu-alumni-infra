@@ -68,7 +68,25 @@ jobs:
               fail "swarm is not active on this node"
             else
               pass "swarm active"
-              # REPLICAS reads "n/m"; anything where running != desired is unhealthy.
+              # Called right after a deploy, so Swarm may still be converging: during
+              # a rolling update a service reports "2/1" while the old and new tasks
+              # overlap. Poll until every service settles rather than failing on a
+              # transient state; only a service still wrong at the deadline is a bug.
+              settled=0
+              for _ in $(seq 1 18); do
+                pending=""
+                while read -r name replicas; do
+                  [ -z "$name" ] && continue
+                  running="${replicas%%/*}"
+                  desired="${replicas##*/}"
+                  if [ "$running" != "$desired" ] || [ "$running" = "0" ]; then
+                    pending="$pending $name=$replicas"
+                  fi
+                done <<< "$(docker service ls --format '{{.Name}} {{.Replicas}}' 2>/dev/null)"
+                if [ -z "$pending" ]; then settled=1; break; fi
+                sleep 10
+              done
+
               while read -r name replicas; do
                 [ -z "$name" ] && continue
                 running="${replicas%%/*}"
@@ -76,9 +94,10 @@ jobs:
                 if [ "$running" = "$desired" ] && [ "$running" != "0" ]; then
                   pass "$name ($replicas)"
                 else
-                  fail "$name has $replicas replicas running"
+                  fail "$name has $replicas replicas after waiting for convergence"
                 fi
               done <<< "$(docker service ls --format '{{.Name}} {{.Replicas}}' 2>/dev/null)"
+              [ "$settled" = "1" ] || echo "  (services did not converge within 180s)"
             fi
 
             echo "══════════ 2. vhosts via nginx ══════════"
