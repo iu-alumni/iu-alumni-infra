@@ -128,9 +128,24 @@ jobs:
 
             echo; echo "══════════ LOCAL HTTP CHECKS ══════════"
             for p in 80 443; do
-              printf 'localhost:%s -> ' "$p"
+              printf 'localhost:%s (no Host) -> ' "$p"
               curl -s -o /dev/null -m 5 -w '%{http_code}\n' "http://localhost:$p/" 2>&1 || echo "no answer"
             done
+            # Definitive per-vhost check: nginx routes by Host header, so a hostless
+            # request only proves the default server. Probe each vhost by name to
+            # confirm the app behind it actually answers on this box.
+            echo "-- per-vhost (Host header -> nginx on :80) --"
+            DOM=$(grep -E '^DOMAIN=' "$DEPLOY_DIR/.env" 2>/dev/null | cut -d= -f2- | tr -d '"'"'"'')
+            if [ -n "$DOM" ]; then
+              for entry in "app:${DOM}" "api:api.${DOM}" "mobile:mobile.${DOM}" \
+                           "admin:admin.${DOM}" "grafana:grafana.${DOM}" "portainer:portainer.${DOM}"; do
+                role="${entry%%:*}"; host="${entry#*:}"
+                code=$(curl -s -o /dev/null -m 8 -w '%{http_code}' -H "Host: ${host}" "http://localhost/" 2>/dev/null)
+                printf '  %-10s -> %s\n' "$role" "${code:-no-response}"
+              done
+            else
+              echo "  (DOMAIN not readable from .env)"
+            fi
 
             echo; echo "══════════ APT LOCK HOLDERS (if setup-server fails) ══════════"
             ps -eo pid,etime,cmd 2>/dev/null | grep -E '[a]pt|[d]pkg' | head -5 || echo "none"
