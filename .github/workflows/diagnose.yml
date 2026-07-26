@@ -143,6 +143,14 @@ jobs:
                 code=$(curl -s -o /dev/null -m 8 -w '%{http_code}' -H "Host: ${host}" "http://localhost/" 2>/dev/null)
                 printf '  %-10s -> %s\n' "$role" "${code:-no-response}"
               done
+              # The API root often has no route (404 from the app itself, which still
+              # proves nginx->backend works; a broken proxy would give 502/504).
+              # Probe real API paths to confirm the backend is actually serving.
+              echo "-- api paths (Host: api.\$DOMAIN) --"
+              for path in /docs /openapi.json /health /api/v1/health; do
+                code=$(curl -s -o /dev/null -m 8 -w '%{http_code}' -H "Host: api.${DOM}" "http://localhost${path}" 2>/dev/null)
+                printf '  %-18s -> %s\n' "$path" "${code:-no-response}"
+              done
             else
               echo "  (DOMAIN not readable from .env)"
             fi
