@@ -33,7 +33,7 @@ jobs:
     runs-on: [self-hosted]
     environment: testing
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Install self-hosted runner tools
         uses: ./.github/actions/bootstrap-self-hosted-tools
@@ -108,7 +108,7 @@ jobs:
     runs-on: [self-hosted]
     environment: production
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Install self-hosted runner tools
         uses: ./.github/actions/bootstrap-self-hosted-tools
