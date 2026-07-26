@@ -155,6 +155,43 @@ jobs:
               echo "  (DOMAIN not readable from .env)"
             fi
 
+            echo; echo "══════════ INGRESS PATH ══════════"
+            # The public hostnames resolve to the university's Angie ingress, which
+            # answers 403 externally. The question this section settles is whether
+            # Angie forwards to us at all: if our nginx never logs a request from
+            # the ingress, the request is being refused upstream of us.
+            echo "-- what is listening on 80/443 --"
+            (ss -lntp 2>/dev/null || netstat -lntp 2>/dev/null) | grep -E ':(80|443) ' | head -6
+
+            echo "-- nginx request sources (last 2000 log lines, by client IP) --"
+            # Access logs go to stdout, so they come from the service log. Query
+            # strings are stripped: verification links carry ?token=... and these
+            # repos are public.
+            docker service logs --tail 2000 iu_alumni_infra_nginx 2>&1 \
+              | sed -E 's/\?[^ "]*/?<scrubbed>/g' \
+              | grep -oE '^[^|]*\| *[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+' \
+              | grep -oE '[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$' \
+              | sort | uniq -c | sort -rn | head -10 \
+              || echo "  (no client IPs parsed from nginx logs)"
+
+            echo "-- recent nginx requests (scrubbed) --"
+            docker service logs --tail 40 iu_alumni_infra_nginx 2>&1 \
+              | sed -E 's/\?[^ "]*/?<scrubbed>/g' | tail -15
+
+            echo "-- can this server reach its own public hostname (through the ingress)? --"
+            if [ -n "$DOM" ]; then
+              for host in "$DOM" "api.$DOM"; do
+                printf '  https://%s -> ' "$host"
+                curl -s -o /dev/null -m 15 -w '%{http_code} (server: %{scheme})\n' "https://${host}/" 2>&1 \
+                  || echo "no answer"
+              done
+              echo "  -- same hostname, but straight at our own nginx --"
+              for host in "$DOM" "api.$DOM"; do
+                printf '  Host:%s -> localhost:80 -> ' "$host"
+                curl -s -o /dev/null -m 10 -w '%{http_code}\n' -H "Host: ${host}" http://localhost/ 2>&1
+              done
+            fi
+
             echo; echo "══════════ APT LOCK HOLDERS (if setup-server fails) ══════════"
             ps -eo pid,etime,cmd 2>/dev/null | grep -E '[a]pt|[d]pkg' | head -5 || echo "none"
             echo; echo "════════ END OF DIAGNOSTICS ════════"
