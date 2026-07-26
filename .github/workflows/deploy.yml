@@ -17,10 +17,17 @@ on:
       - 'prometheus/**'
       - 'grafana/**'
       - 'scripts/**'
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Target environment'
+        required: true
+        type: choice
+        options: [testing, production]
 
 jobs:
   deploy-testing:
-    if: github.event_name == 'pull_request'
+    if: github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'testing')
     uses: iu-alumni/iu-alumni-infra/.github/workflows/deploy-service.yml@main
     with:
       repo_dir: infra
@@ -32,7 +39,7 @@ jobs:
       SERVER_SSH_KEY: ${{ secrets.SERVER_SSH_KEY }}
 
   deploy-production:
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || (github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'production')
     uses: iu-alumni/iu-alumni-infra/.github/workflows/deploy-service.yml@main
     with:
       repo_dir: infra
