@@ -21,11 +21,13 @@
     # ── System packages ──────────────────────────────────
     - name: Update apt cache
       ansible.builtin.apt:
+        lock_timeout: 300
         update_cache: true
         cache_valid_time: 3600
 
     - name: Install essential packages
       ansible.builtin.apt:
+        lock_timeout: 300
         name:
           - curl
           - wget
@@ -76,6 +78,7 @@
 
     - name: Install Docker
       ansible.builtin.apt:
+        lock_timeout: 300
         name:
           - docker-ce
           - docker-ce-cli
@@ -83,6 +86,25 @@
           - docker-compose-plugin
         state: present
         update_cache: true
+
+    # docker.service starts dockerd with `-H fd://`, which requires docker.socket
+    # to be active. When docker-ce replaces a pre-existing docker.io install the
+    # socket unit can be left disabled, and dockerd then dies with
+    #   "failed to load listeners: no sockets found via socket activation"
+    # Enable/start the socket first so the daemon has its listener.
+    - name: Ensure docker.socket is enabled and started
+      ansible.builtin.systemd:
+        name: docker.socket
+        state: started
+        enabled: true
+        daemon_reload: true
+
+    # After 3 rapid failures systemd latches "start request repeated too quickly"
+    # and refuses further starts until the unit's failed state is cleared.
+    - name: Clear any latched docker.service failure state
+      ansible.builtin.command: systemctl reset-failed docker.service
+      changed_when: false
+      failed_when: false
 
     - name: Start and enable Docker
       ansible.builtin.systemd:
