@@ -38,6 +38,24 @@ jobs:
     runs-on: [self-hosted]
     environment: ${{ inputs.environment }}
     steps:
+      # The public hostnames sit behind the university's Angie ingress, which
+      # only serves clients inside the corporate network. The self-hosted runner
+      # IS inside it, so this is the only place the endpoints can be verified.
+      # Hostnames derive from the DOMAIN secret, so they print masked (***) —
+      # each line is labelled by role instead.
+      - name: Check public endpoints from inside the network
+        env:
+          DOMAIN: ${{ secrets.DOMAIN }}
+        run: |
+          set +e
+          echo "── endpoint reachability (via ingress, from inside network) ──"
+          for entry in "app:${DOMAIN}" "api:api.${DOMAIN}" "mobile:mobile.${DOMAIN}" \
+                       "admin:admin.${DOMAIN}" "grafana:grafana.${DOMAIN}" "portainer:portainer.${DOMAIN}"; do
+            role="${entry%%:*}"; host="${entry#*:}"
+            code=$(curl -s -o /dev/null -m 15 -w '%{http_code}' "https://${host}/" 2>/dev/null)
+            printf '  %-10s https -> %s\n' "$role" "${code:-no-response}"
+          done
+
       - name: Collect diagnostics over SSH
         uses: appleboy/ssh-action@v1
         with:
