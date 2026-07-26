@@ -1,0 +1,119 @@
+name: Smoke test
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Post-deploy end-to-end verification. Runs on the self-hosted runner and, over
+# SSH, asserts that the deployment actually serves traffic:
+#
+#   1. every Swarm service has all its replicas running (n/n)
+#   2. every vhost answers through nginx with an acceptable status
+#   3. the backend answers through nginx (proves the proxy path, not just nginx)
+#
+# Exits non-zero when an assertion fails, so a broken deploy is caught instead
+# of being reported as "deployed successfully".
+#
+# Checks run against nginx on the box itself using Host headers. The public
+# hostnames sit behind the university's Angie ingress, which is not reachable
+# from CI, so on-box checks are the authoritative signal for our own stack.
+# ─────────────────────────────────────────────────────────────────────────────
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Target environment'
+        required: true
+        type: choice
+        options:
+          - testing
+          - production
+  workflow_call:
+    inputs:
+      environment:
+        description: 'Target environment'
+        required: true
+        type: string
+    secrets:
+      SERVER_HOST:
+        required: true
+      SERVER_USER:
+        required: true
+      SERVER_SSH_KEY:
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    runs-on: [self-hosted]
+    environment: ${{ inputs.environment }}
+    steps:
+      - name: Assert deployment is healthy
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          command_timeout: 5m
+          envs: DEPLOY_DIR
+          script: |
+            set -u
+            failures=0
+            fail() { echo "  FAIL: $*"; failures=$((failures + 1)); }
+            pass() { echo "  ok:   $*"; }
+
+            echo "══════════ 1. swarm services ══════════"
+            if ! docker info --format '{{.Swarm.LocalNodeState}}' 2>/dev/null | grep -q active; then
+              fail "swarm is not active on this node"
+            else
+              pass "swarm active"
+              # REPLICAS reads "n/m"; anything where running != desired is unhealthy.
+              while read -r name replicas; do
+                [ -z "$name" ] && continue
+                running="${replicas%%/*}"
+                desired="${replicas##*/}"
+                if [ "$running" = "$desired" ] && [ "$running" != "0" ]; then
+                  pass "$name ($replicas)"
+                else
+                  fail "$name has $replicas replicas running"
+                fi
+              done <<< "$(docker service ls --format '{{.Name}} {{.Replicas}}' 2>/dev/null)"
+            fi
+
+            echo "══════════ 2. vhosts via nginx ══════════"
+            DOM=$(grep -E '^DOMAIN=' "$DEPLOY_DIR/.env" 2>/dev/null | cut -d= -f2- | tr -d '"')
+            if [ -z "$DOM" ]; then
+              fail "DOMAIN not readable from $DEPLOY_DIR/.env"
+            else
+              # role:host-prefix:acceptable-codes  ('-' prefix means bare domain)
+              for entry in "frontend:-:200" "mobile:mobile:200" "admin:admin:200" \
+                           "grafana:grafana:200,302" "portainer:portainer:200,307,308"; do
+                role="${entry%%:*}"; rest="${entry#*:}"
+                prefix="${rest%%:*}"; want="${rest##*:}"
+                if [ "$prefix" = "-" ]; then host="$DOM"; else host="${prefix}.${DOM}"; fi
+                code=$(curl -s -o /dev/null -m 15 -w '%{http_code}' -H "Host: ${host}" http://localhost/ 2>/dev/null)
+                if echo ",$want," | grep -q ",${code},"; then
+                  pass "$role -> $code"
+                else
+                  fail "$role -> ${code:-no-response} (expected one of $want)"
+                fi
+              done
+
+              echo "══════════ 3. backend through nginx ══════════"
+              # The API root has no route, so / returning 404 is normal. /metrics is
+              # served by the app itself, so a 200 proves nginx -> backend works.
+              # A dead backend surfaces as 502/504 here instead.
+              code=$(curl -s -o /dev/null -m 15 -w '%{http_code}' -H "Host: api.${DOM}" http://localhost/metrics 2>/dev/null)
+              case "$code" in
+                200) pass "api /metrics -> 200" ;;
+                502|503|504) fail "api /metrics -> $code (nginx cannot reach the backend)" ;;
+                *) fail "api /metrics -> ${code:-no-response} (expected 200)" ;;
+              esac
+            fi
+
+            echo
+            if [ "$failures" -gt 0 ]; then
+              echo "SMOKE TEST FAILED: $failures check(s) failed"
+              exit 1
+            fi
+            echo "SMOKE TEST PASSED: all checks green"
