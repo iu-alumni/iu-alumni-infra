@@ -101,14 +101,29 @@ jobs:
               done
 
               echo "══════════ 3. backend through nginx ══════════"
-              # The API root has no route, so / returning 404 is normal. /metrics is
-              # served by the app itself, so a 200 proves nginx -> backend works.
-              # A dead backend surfaces as 502/504 here instead.
-              code=$(curl -s -o /dev/null -m 15 -w '%{http_code}' -H "Host: api.${DOM}" http://localhost/metrics 2>/dev/null)
+              # The API root has no route, so 404 from the app is normal and still
+              # proves the proxy path works. What must never happen is nginx failing
+              # to reach the backend at all (502/503/504) or no answer.
+              code=$(curl -s -o /dev/null -m 15 -w '%{http_code}' -H "Host: api.${DOM}" http://localhost/ 2>/dev/null)
               case "$code" in
-                200) pass "api /metrics -> 200" ;;
-                502|503|504) fail "api /metrics -> $code (nginx cannot reach the backend)" ;;
-                *) fail "api /metrics -> ${code:-no-response} (expected 200)" ;;
+                "" | 000) fail "api unreachable through nginx (no response)" ;;
+                502 | 503 | 504) fail "api -> $code (nginx cannot reach the backend)" ;;
+                *) pass "api reachable through nginx (HTTP $code)" ;;
+              esac
+
+              # app/main.py exposes /metrics only when ENVIRONMENT is not DEV/TEST,
+              # so require it only where the app itself would register the route.
+              APP_ENV=$(grep -E '^ENVIRONMENT=' "$DEPLOY_DIR/.env" 2>/dev/null | cut -d= -f2- | tr -d '"' | tr '[:lower:]' '[:upper:]')
+              case "$APP_ENV" in
+                DEV | TEST | "")
+                  echo "  skip: /metrics not exposed when ENVIRONMENT=${APP_ENV:-unset} (by design)" ;;
+                *)
+                  code=$(curl -s -o /dev/null -m 15 -w '%{http_code}' -H "Host: api.${DOM}" http://localhost/metrics 2>/dev/null)
+                  if [ "$code" = "200" ]; then
+                    pass "api /metrics -> 200"
+                  else
+                    fail "api /metrics -> ${code:-no-response} (expected 200 when ENVIRONMENT=$APP_ENV)"
+                  fi ;;
               esac
             fi
 
