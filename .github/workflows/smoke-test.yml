@@ -58,6 +58,7 @@ jobs:
           envs: DEPLOY_DIR
           script: |
             set -u
+            DEPLOY_DIR="${DEPLOY_DIR:-/home/deploy/iu-alumni}"
             failures=0
             fail() { echo "  FAIL: $*"; failures=$((failures + 1)); }
             pass() { echo "  ok:   $*"; }
@@ -117,3 +118,5 @@ jobs:
               exit 1
             fi
             echo "SMOKE TEST PASSED: all checks green"
+        env:
+          DEPLOY_DIR: ${{ secrets.DEPLOY_DIR }}
