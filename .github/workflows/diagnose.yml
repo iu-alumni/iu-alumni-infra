@@ -77,13 +77,21 @@ jobs:
             done
 
             echo; echo "══════════ LOGS ══════════"
+            # Application logs can contain credentials (e.g. a bot token inside a
+            # request URL). These repos are public, so Actions logs are public too.
+            # Only dump logs when explicitly asked, and scrub obvious secrets.
+            redact() {
+              sed -E \
+                -e 's#bot[0-9]{5,}:[A-Za-z0-9_-]{20,}#bot<REDACTED>#g' \
+                -e 's#(password|passwd|token|secret|api[_-]?key|authorization)([=:"[:space:]]+)[^"[:space:],]+#\1\2<REDACTED>#gI' \
+                -e 's#(https?://)[^:/@[:space:]]+:[^@[:space:]]+@#\1<REDACTED>@#g'
+            }
             if [ -n "$SVC" ]; then
-              echo "--- docker service logs $SVC (tail $TAIL)"
-              docker service logs --tail "$TAIL" "$SVC" 2>&1 | tail -"$TAIL"
+              echo "--- docker service logs $SVC (tail $TAIL, secrets scrubbed)"
+              docker service logs --tail "$TAIL" "$SVC" 2>&1 | tail -"$TAIL" | redact
             else
-              for s in $(docker service ls --format '{{.Name}}' 2>/dev/null); do
-                echo "--- $s (tail 25)"; docker service logs --tail 25 "$s" 2>&1 | tail -25
-              done
+              echo "(skipped — pass the 'service' input to dump logs for one service)"
+              echo "Task state above already shows crash/restart errors without log contents."
             fi
 
             echo; echo "══════════ DEPLOY DIR ══════════"
