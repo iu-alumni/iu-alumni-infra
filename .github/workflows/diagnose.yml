@@ -66,6 +66,9 @@ jobs:
           envs: DEPLOY_DIR,SVC,TAIL
           script: |
             set +e
+            # The deploy user's login shell is zsh and this is a non-interactive
+            # session, so PATH is not reliably populated for later commands.
+            export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:$PATH"
             echo "══════════ HOST ══════════"
             uname -a; grep PRETTY_NAME /etc/os-release; uptime
             echo; echo "══════════ DISK / MEM ══════════"
