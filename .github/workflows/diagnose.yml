@@ -1,0 +1,115 @@
+name: Diagnose server
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Read-only diagnostics for a deployment server. Runs on the self-hosted runner
+# (inside the private network) and prints host/Docker/Swarm/stack/nginx state so
+# deployment failures can be debugged without direct SSH access to the VM.
+#
+# SAFETY: this workflow NEVER prints secret values.
+#   • .env is shown with every value redacted (keys only).
+#   • Nothing is modified — all commands are read-only queries.
+# ─────────────────────────────────────────────────────────────────────────────
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Target environment'
+        required: true
+        type: choice
+        options:
+          - testing
+          - production
+      service:
+        description: 'Optional: docker service name to fetch logs for (e.g. iu_alumni_backend_backend)'
+        required: false
+        type: string
+      tail:
+        description: 'Log lines to tail per service'
+        required: false
+        type: string
+        default: '80'
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    runs-on: [self-hosted]
+    environment: ${{ inputs.environment }}
+    steps:
+      - name: Collect diagnostics over SSH
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          command_timeout: 5m
+          envs: DEPLOY_DIR,SVC,TAIL
+          script: |
+            set +e
+            echo "══════════ HOST ══════════"
+            uname -a; grep PRETTY_NAME /etc/os-release; uptime
+            echo; echo "══════════ DISK / MEM ══════════"
+            df -h / | tail -2; free -h | head -2
+
+            echo; echo "══════════ DOCKER SERVICE STATUS ══════════"
+            systemctl is-active docker; systemctl status docker --no-pager -l 2>&1 | head -25
+
+            echo; echo "══════════ DOCKER DAEMON JOURNAL (last 60) ══════════"
+            (sudo -n journalctl -xeu docker.service --no-pager -n 60 2>/dev/null \
+              || journalctl -xeu docker.service --no-pager -n 60 2>&1 | head -60 \
+              || echo "journalctl unavailable (needs sudo)")
+
+            echo; echo "══════════ DOCKER / SWARM ══════════"
+            docker version 2>&1 | head -12
+            echo "-- swarm state --"; docker info --format '{{.Swarm.LocalNodeState}} (manager={{.Swarm.ControlAvailable}})' 2>&1
+            echo "-- nodes --"; docker node ls 2>&1 | head -5
+
+            echo; echo "══════════ STACKS / SERVICES ══════════"
+            docker stack ls 2>&1
+            docker service ls 2>&1
+
+            echo; echo "══════════ SERVICE TASKS (failures visible here) ══════════"
+            for s in $(docker service ls --format '{{.Name}}' 2>/dev/null); do
+              echo "--- $s"
+              docker service ps --no-trunc --format '{{.Name}} {{.CurrentState}} {{.Error}}' "$s" 2>&1 | head -6
+            done
+
+            echo; echo "══════════ LOGS ══════════"
+            if [ -n "$SVC" ]; then
+              echo "--- docker service logs $SVC (tail $TAIL)"
+              docker service logs --tail "$TAIL" "$SVC" 2>&1 | tail -"$TAIL"
+            else
+              for s in $(docker service ls --format '{{.Name}}' 2>/dev/null); do
+                echo "--- $s (tail 25)"; docker service logs --tail 25 "$s" 2>&1 | tail -25
+              done
+            fi
+
+            echo; echo "══════════ DEPLOY DIR ══════════"
+            ls -la "$DEPLOY_DIR" 2>&1 | head -20
+
+            echo; echo "══════════ .env KEYS (values redacted) ══════════"
+            if [ -f "$DEPLOY_DIR/.env" ]; then
+              sed -E 's/=.*/=<redacted>/' "$DEPLOY_DIR/.env" | sort
+            else
+              echo "NO .env at $DEPLOY_DIR/.env"
+            fi
+
+            echo; echo "══════════ NGINX CONFIGS (server_name shows active domain) ══════════"
+            ls -la "$DEPLOY_DIR/nginx/conf.d" 2>&1 | head -15
+            grep -h -E "server_name|proxy_pass" "$DEPLOY_DIR"/nginx/conf.d/*.conf 2>/dev/null | head -25
+
+            echo; echo "══════════ LOCAL HTTP CHECKS ══════════"
+            for p in 80 443; do
+              printf 'localhost:%s -> ' "$p"
+              curl -s -o /dev/null -m 5 -w '%{http_code}\n' "http://localhost:$p/" 2>&1 || echo "no answer"
+            done
+
+            echo; echo "══════════ APT LOCK HOLDERS (if setup-server fails) ══════════"
+            ps -eo pid,etime,cmd 2>/dev/null | grep -E '[a]pt|[d]pkg' | head -5 || echo "none"
+            echo; echo "════════ END OF DIAGNOSTICS ════════"
+        env:
+          DEPLOY_DIR: ${{ secrets.DEPLOY_DIR }}
+          SVC: ${{ inputs.service }}
+          TAIL: ${{ inputs.tail }}

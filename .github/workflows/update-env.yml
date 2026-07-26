@@ -14,15 +14,17 @@ on:
 jobs:
   update-env-testing:
     if: github.event.inputs.environment == 'testing'
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted]
     environment: testing
     steps:
       - uses: actions/checkout@v6
 
-      - name: Install Ansible
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y ansible
+      - name: Install self-hosted runner tools
+        uses: ./.github/actions/bootstrap-self-hosted-tools
+
+      - name: Install Ansible collections
+        working-directory: ansible
+        run: ansible-galaxy collection install -r requirements.yml
 
       - name: Write SSH key
         run: |
@@ -71,15 +73,17 @@ jobs:
 
   update-env-production:
     if: github.event.inputs.environment == 'production'
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted]
     environment: production
     steps:
       - uses: actions/checkout@v6
 
-      - name: Install Ansible
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y ansible
+      - name: Install self-hosted runner tools
+        uses: ./.github/actions/bootstrap-self-hosted-tools
+
+      - name: Install Ansible collections
+        working-directory: ansible
+        run: ansible-galaxy collection install -r requirements.yml
 
       - name: Write SSH key
         run: |
