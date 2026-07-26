@@ -180,6 +180,14 @@ jobs:
             /usr/bin/docker service logs --tail 40 iu_alumni_infra_nginx 2>&1 | /usr/bin/sed -E 's/\?[^ "]*/?<scrubbed>/g' | /usr/bin/tail -12
 
             if [ -n "$DOM" ]; then
+              echo "-- how does this server resolve the public hostname? --"
+              /usr/bin/getent hosts "$DOM" 2>&1 | /usr/bin/head -3 || echo "  (no A record from this host)"
+              echo "-- can we open a TCP connection to the ingress? --"
+              for port in 80 443; do
+                printf '  tcp %s -> ' "$port"
+                /usr/bin/timeout 8 /usr/bin/curl -s -o /dev/null -m 8 \
+                  -w '%{http_code} connect=%{time_connect}s\n' "http://${DOM}:${port}/" 2>&1 || echo "unreachable"
+              done
               echo "-- through the ingress (public hostname) --"
               for host in "$DOM" "api.$DOM"; do
                 printf '  https://%s -> ' "$host"
