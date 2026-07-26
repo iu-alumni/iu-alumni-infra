@@ -138,7 +138,7 @@ jobs:
             # request only proves the default server. Probe each vhost by name to
             # confirm the app behind it actually answers on this box.
             echo "-- per-vhost (Host header -> nginx on :80) --"
-            DOM=$(grep -E '^DOMAIN=' "$DEPLOY_DIR/.env" 2>/dev/null | cut -d= -f2- | tr -d '"'"'"'')
+            DOM=$(grep -E '^DOMAIN=' "$DEPLOY_DIR/.env" 2>/dev/null | cut -d= -f2- | tr -d '"')
             if [ -n "$DOM" ]; then
               for entry in "app:${DOM}" "api:api.${DOM}" "mobile:mobile.${DOM}" \
                            "admin:admin.${DOM}" "grafana:grafana.${DOM}" "portainer:portainer.${DOM}"; do
