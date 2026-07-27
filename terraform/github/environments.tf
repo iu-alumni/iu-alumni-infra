@@ -91,6 +91,43 @@ resource "github_actions_environment_secret" "production_server_ssh_key" {
   value = var.production_server_ssh_key
 }
 
+# ── Domain / environment — needed by the smoke test in every app repo ────────
+# The smoke test curls the real public hostnames, so every repo that calls it
+# needs DOMAIN. ENVIRONMENT gates the /metrics assertion (the backend only
+# exposes /metrics when it is not DEV/TEST).
+
+resource "github_actions_environment_secret" "testing_domain" {
+  for_each    = local.app_repos
+  repository  = each.value
+  environment = github_repository_environment.testing[each.key].environment
+  secret_name = "DOMAIN"
+  value       = var.testing_domain
+}
+
+resource "github_actions_environment_secret" "production_domain" {
+  for_each    = local.app_repos
+  repository  = each.value
+  environment = github_repository_environment.production[each.key].environment
+  secret_name = "DOMAIN"
+  value       = var.production_domain
+}
+
+resource "github_actions_environment_secret" "testing_app_environment" {
+  for_each    = local.app_repos
+  repository  = each.value
+  environment = github_repository_environment.testing[each.key].environment
+  secret_name = "ENVIRONMENT"
+  value       = var.testing_environment
+}
+
+resource "github_actions_environment_secret" "production_app_environment" {
+  for_each    = local.app_repos
+  repository  = each.value
+  environment = github_repository_environment.production[each.key].environment
+  secret_name = "ENVIRONMENT"
+  value       = var.production_environment
+}
+
 # ── Infra-specific secrets (server configuration) ────────────────────────────
 
 locals {

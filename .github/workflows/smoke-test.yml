@@ -39,6 +39,13 @@ on:
         required: true
       SERVER_SSH_KEY:
         required: true
+      # Needed for the public-endpoint checks. Optional so a caller that has
+      # not been given them yet degrades to the on-server checks instead of
+      # failing outright.
+      DOMAIN:
+        required: false
+      ENVIRONMENT:
+        required: false
 
 permissions:
   contents: read
@@ -65,8 +72,9 @@ jobs:
           pass() { echo "  ok:   $*"; }
 
           if [ -z "$DOMAIN" ]; then
-            echo "  FAIL: DOMAIN secret is empty"
-            exit 1
+            echo "  skip: DOMAIN not provided to this caller — public endpoint"
+            echo "        checks skipped; the on-server checks below still run."
+            exit 0
           fi
 
           echo "── public endpoints (https) ──"
@@ -145,7 +153,7 @@ jobs:
                   [ -z "$name" ] && continue
                   running="${replicas%%/*}"
                   desired="${replicas##*/}"
-                  if [ "$running" != "$desired" ] || [ "$running" = "0" ]; then
+                  if [ "$running" -lt "$desired" ] || [ "$running" = "0" ]; then
                     pending="$pending $name=$replicas"
                   fi
                 done <<< "$(docker service ls --format '{{.Name}} {{.Replicas}}' 2>/dev/null)"
@@ -157,10 +165,14 @@ jobs:
                 [ -z "$name" ] && continue
                 running="${replicas%%/*}"
                 desired="${replicas##*/}"
-                if [ "$running" = "$desired" ] && [ "$running" != "0" ]; then
+                # Healthy means "at least the desired number are running". A
+                # rolling update briefly reports more than desired while the old
+                # and new tasks overlap, and production showed 3/1 mid-deploy
+                # while serving fine. Too few (or none) is the real fault.
+                if [ "$running" -ge "$desired" ] && [ "$running" != "0" ]; then
                   pass "$name ($replicas)"
                 else
-                  fail "$name has $replicas replicas after waiting for convergence"
+                  fail "$name has only $replicas replicas after waiting for convergence"
                 fi
               done <<< "$(docker service ls --format '{{.Name}} {{.Replicas}}' 2>/dev/null)"
               [ "$settled" = "1" ] || echo "  (services did not converge within 180s)"
