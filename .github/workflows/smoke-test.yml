@@ -1,19 +1,19 @@
 name: Smoke test
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Post-deploy end-to-end verification. Runs on the self-hosted runner and, over
-# SSH, asserts that the deployment actually serves traffic:
+# Post-deploy end-to-end verification, in two parts:
 #
-#   1. every Swarm service has all its replicas running (n/n)
-#   2. every vhost answers through nginx with an acceptable status
-#   3. the backend answers through nginx (proves the proxy path, not just nginx)
+#   1. on the runner  — every public vhost answers over HTTPS, and the backend
+#                       is reachable through nginx rather than 502/504
+#   2. over SSH       — every Swarm service has all its replicas running (n/n)
 #
 # Exits non-zero when an assertion fails, so a broken deploy is caught instead
 # of being reported as "deployed successfully".
 #
-# Checks run against nginx on the box itself using Host headers. The public
-# hostnames sit behind the university's Angie ingress, which is not reachable
-# from CI, so on-box checks are the authoritative signal for our own stack.
+# The HTTP checks deliberately hit the public hostnames rather than
+# http://localhost with a Host header: once nginx is republished with TLS the
+# Swarm ingress routing mesh stops answering on loopback, which made every vhost
+# read as 000 while the site was serving perfectly from outside.
 # ─────────────────────────────────────────────────────────────────────────────
 
 on:
@@ -48,6 +48,72 @@ jobs:
     runs-on: [self-hosted]
     environment: ${{ inputs.environment }}
     steps:
+      # Public endpoint assertions run here, on the runner, against the real
+      # hostnames. They used to run over SSH as http://localhost with a Host
+      # header, but once nginx is republished with TLS the Swarm ingress routing
+      # mesh stops answering on loopback: every vhost read as 000 while the site
+      # was serving fine publicly, so the gate failed on healthy deployments.
+      # Hitting the public URL is also a truer end-to-end check.
+      - name: Assert public endpoints respond
+        env:
+          DOMAIN: ${{ secrets.DOMAIN }}
+          APP_ENV: ${{ secrets.ENVIRONMENT }}
+        run: |
+          set +e
+          failures=0
+          fail() { echo "  FAIL: $*"; failures=$((failures + 1)); }
+          pass() { echo "  ok:   $*"; }
+
+          if [ -z "$DOMAIN" ]; then
+            echo "  FAIL: DOMAIN secret is empty"
+            exit 1
+          fi
+
+          echo "── public endpoints (https) ──"
+          # role:host-prefix:acceptable-codes  ('-' means the bare domain)
+          for entry in "frontend:-:200" "mobile:mobile:200" "admin:admin:200" \
+                       "grafana:grafana:200,302" "portainer:portainer:200,307,308"; do
+            role="${entry%%:*}"; rest="${entry#*:}"
+            prefix="${rest%%:*}"; want="${rest##*:}"
+            if [ "$prefix" = "-" ]; then host="$DOMAIN"; else host="${prefix}.${DOMAIN}"; fi
+            code=$(curl -s -o /dev/null -m 20 -w '%{http_code}' "https://${host}/" 2>/dev/null)
+            if echo ",$want," | grep -q ",${code},"; then
+              pass "$role -> $code"
+            else
+              fail "$role -> ${code:-no-response} (expected one of $want)"
+            fi
+          done
+
+          # The API root has no route, so 404 is normal and still proves the
+          # request reached the backend. A dead backend shows up as 502/503/504.
+          code=$(curl -s -o /dev/null -m 20 -w '%{http_code}' "https://api.${DOMAIN}/" 2>/dev/null)
+          case "$code" in
+            "" | 000)        fail "api unreachable (no response)" ;;
+            502 | 503 | 504) fail "api -> $code (nginx cannot reach the backend)" ;;
+            *)               pass "api reachable (HTTP $code)" ;;
+          esac
+
+          # app/main.py mounts /metrics only when ENVIRONMENT is not DEV/TEST.
+          up=$(printf '%s' "$APP_ENV" | tr '[:lower:]' '[:upper:]')
+          case "$up" in
+            DEV | TEST | "")
+              echo "  skip: /metrics not exposed when ENVIRONMENT=${up:-unset} (by design)" ;;
+            *)
+              code=$(curl -s -o /dev/null -m 20 -w '%{http_code}' "https://api.${DOMAIN}/metrics" 2>/dev/null)
+              if [ "$code" = "200" ]; then
+                pass "api /metrics -> 200"
+              else
+                fail "api /metrics -> ${code:-no-response} (expected 200 when ENVIRONMENT=$up)"
+              fi ;;
+          esac
+
+          echo
+          if [ "$failures" -gt 0 ]; then
+            echo "PUBLIC ENDPOINT CHECKS FAILED: $failures check(s) failed"
+            exit 1
+          fi
+          echo "PUBLIC ENDPOINT CHECKS PASSED"
+
       - name: Assert deployment is healthy
         uses: appleboy/ssh-action@v1
         with:
@@ -100,51 +166,8 @@ jobs:
               [ "$settled" = "1" ] || echo "  (services did not converge within 180s)"
             fi
 
-            echo "══════════ 2. vhosts via nginx ══════════"
-            DOM=$(grep -E '^DOMAIN=' "$DEPLOY_DIR/.env" 2>/dev/null | cut -d= -f2- | tr -d '"')
-            if [ -z "$DOM" ]; then
-              fail "DOMAIN not readable from $DEPLOY_DIR/.env"
-            else
-              # role:host-prefix:acceptable-codes  ('-' prefix means bare domain)
-              for entry in "frontend:-:200" "mobile:mobile:200" "admin:admin:200" \
-                           "grafana:grafana:200,302" "portainer:portainer:200,307,308"; do
-                role="${entry%%:*}"; rest="${entry#*:}"
-                prefix="${rest%%:*}"; want="${rest##*:}"
-                if [ "$prefix" = "-" ]; then host="$DOM"; else host="${prefix}.${DOM}"; fi
-                code=$(curl -s -o /dev/null -m 15 -w '%{http_code}' -H "Host: ${host}" http://localhost/ 2>/dev/null)
-                if echo ",$want," | grep -q ",${code},"; then
-                  pass "$role -> $code"
-                else
-                  fail "$role -> ${code:-no-response} (expected one of $want)"
-                fi
-              done
-
-              echo "══════════ 3. backend through nginx ══════════"
-              # The API root has no route, so 404 from the app is normal and still
-              # proves the proxy path works. What must never happen is nginx failing
-              # to reach the backend at all (502/503/504) or no answer.
-              code=$(curl -s -o /dev/null -m 15 -w '%{http_code}' -H "Host: api.${DOM}" http://localhost/ 2>/dev/null)
-              case "$code" in
-                "" | 000) fail "api unreachable through nginx (no response)" ;;
-                502 | 503 | 504) fail "api -> $code (nginx cannot reach the backend)" ;;
-                *) pass "api reachable through nginx (HTTP $code)" ;;
-              esac
-
-              # app/main.py exposes /metrics only when ENVIRONMENT is not DEV/TEST,
-              # so require it only where the app itself would register the route.
-              APP_ENV=$(grep -E '^ENVIRONMENT=' "$DEPLOY_DIR/.env" 2>/dev/null | cut -d= -f2- | tr -d '"' | tr '[:lower:]' '[:upper:]')
-              case "$APP_ENV" in
-                DEV | TEST | "")
-                  echo "  skip: /metrics not exposed when ENVIRONMENT=${APP_ENV:-unset} (by design)" ;;
-                *)
-                  code=$(curl -s -o /dev/null -m 15 -w '%{http_code}' -H "Host: api.${DOM}" http://localhost/metrics 2>/dev/null)
-                  if [ "$code" = "200" ]; then
-                    pass "api /metrics -> 200"
-                  else
-                    fail "api /metrics -> ${code:-no-response} (expected 200 when ENVIRONMENT=$APP_ENV)"
-                  fi ;;
-              esac
-            fi
+            # Sections 2 and 3 (HTTP reachability) now run on the runner
+            # against the public hostnames — see the step above.
 
             echo
             if [ "$failures" -gt 0 ]; then
