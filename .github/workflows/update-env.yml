@@ -37,38 +37,65 @@ jobs:
         working-directory: ansible
         env:
           ANSIBLE_HOST_KEY_CHECKING: "false"
+          ADMIN_CHAT_ID: ${{ secrets.ADMIN_CHAT_ID }}
+          ADMIN_EMAIL: ${{ secrets.ADMIN_EMAIL }}
+          ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
+          CERTBOT_EMAIL: ${{ secrets.CERTBOT_EMAIL }}
+          CORS_ORIGINS: ${{ secrets.CORS_ORIGINS }}
+          DEPLOY_DIR: ${{ secrets.DEPLOY_DIR }}
+          DOMAIN: ${{ secrets.DOMAIN }}
+          EMAIL_HASH_SECRET: ${{ secrets.EMAIL_HASH_SECRET }}
+          ENVIRONMENT: ${{ secrets.ENVIRONMENT }}
+          GRAFANA_PASSWORD: ${{ secrets.GRAFANA_PASSWORD }}
+          GRAFANA_USER: ${{ secrets.GRAFANA_USER }}
+          LOGIN_CODE_EXPIRY_MINUTES: ${{ secrets.LOGIN_CODE_EXPIRY_MINUTES }}
+          MAIL_FROM: ${{ secrets.MAIL_FROM }}
+          MAIL_FROM_NAME: ${{ secrets.MAIL_FROM_NAME }}
+          MAIL_PASSWORD: ${{ secrets.MAIL_PASSWORD }}
+          MAIL_PORT: ${{ secrets.MAIL_PORT }}
+          MAIL_SERVER: ${{ secrets.MAIL_SERVER }}
+          MAIL_USERNAME: ${{ secrets.MAIL_USERNAME }}
+          MINI_APP_URL: ${{ secrets.MINI_APP_URL }}
+          PASSWORD_RESET_EXPIRY_MINUTES: ${{ secrets.PASSWORD_RESET_EXPIRY_MINUTES }}
+          POSTGRES_DB: ${{ secrets.POSTGRES_DB }}
+          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+          POSTGRES_USER: ${{ secrets.POSTGRES_USER }}
+          SECRET_KEY: ${{ secrets.SECRET_KEY }}
+          SERVER_HOST: ${{ secrets.SERVER_HOST }}
+          SERVER_USER: ${{ secrets.SERVER_USER }}
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
         run: |
           ansible-playbook playbooks/setup-server.yml \
             --limit testing \
             --tags env \
-            -e "server_ip=${{ secrets.SERVER_HOST }}" \
-            -e "server_user=${{ secrets.SERVER_USER }}" \
+            -e "server_ip=$SERVER_HOST" \
+            -e "server_user=$SERVER_USER" \
             -e "ghcr_user=${{ github.actor }}" \
-            -e "deploy_dir=${{ secrets.DEPLOY_DIR }}" \
-            -e "domain=${{ secrets.DOMAIN }}" \
-            -e "certbot_email=${{ secrets.CERTBOT_EMAIL }}" \
-            -e "postgres_password=${{ secrets.POSTGRES_PASSWORD }}" \
-            -e "postgres_user=${{ secrets.POSTGRES_USER }}" \
-            -e "postgres_db=${{ secrets.POSTGRES_DB }}" \
-            -e "secret_key=${{ secrets.SECRET_KEY }}" \
-            -e "admin_email=${{ secrets.ADMIN_EMAIL }}" \
-            -e "admin_password=${{ secrets.ADMIN_PASSWORD }}" \
-            -e "email_hash_secret=${{ secrets.EMAIL_HASH_SECRET }}" \
-            -e "mail_username=${{ secrets.MAIL_USERNAME }}" \
-            -e "mail_password=${{ secrets.MAIL_PASSWORD }}" \
-            -e "mail_from=${{ secrets.MAIL_FROM }}" \
-            -e "mail_from_name=${{ secrets.MAIL_FROM_NAME }}" \
-            -e "mail_server=${{ secrets.MAIL_SERVER }}" \
-            -e "mail_port=${{ secrets.MAIL_PORT }}" \
-            -e "telegram_token=${{ secrets.TELEGRAM_TOKEN }}" \
-            -e "admin_chat_id=${{ secrets.ADMIN_CHAT_ID }}" \
-            -e "mini_app_url=${{ secrets.MINI_APP_URL }}" \
-            -e "grafana_user=${{ secrets.GRAFANA_USER }}" \
-            -e "grafana_password=${{ secrets.GRAFANA_PASSWORD }}" \
-            -e "app_environment=${{ secrets.ENVIRONMENT }}" \
-            -e "cors_origins=${{ secrets.CORS_ORIGINS }}" \
-            -e "login_code_expiry_minutes=${{ secrets.LOGIN_CODE_EXPIRY_MINUTES }}" \
-            -e "password_reset_expiry_minutes=${{ secrets.PASSWORD_RESET_EXPIRY_MINUTES }}" \
+            -e "deploy_dir=$DEPLOY_DIR" \
+            -e "domain=$DOMAIN" \
+            -e "certbot_email=$CERTBOT_EMAIL" \
+            -e "postgres_password=$POSTGRES_PASSWORD" \
+            -e "postgres_user=$POSTGRES_USER" \
+            -e "postgres_db=$POSTGRES_DB" \
+            -e "secret_key=$SECRET_KEY" \
+            -e "admin_email=$ADMIN_EMAIL" \
+            -e "admin_password=$ADMIN_PASSWORD" \
+            -e "email_hash_secret=$EMAIL_HASH_SECRET" \
+            -e "mail_username=$MAIL_USERNAME" \
+            -e "mail_password=$MAIL_PASSWORD" \
+            -e "mail_from=$MAIL_FROM" \
+            -e "mail_from_name=$MAIL_FROM_NAME" \
+            -e "mail_server=$MAIL_SERVER" \
+            -e "mail_port=$MAIL_PORT" \
+            -e "telegram_token=$TELEGRAM_TOKEN" \
+            -e "admin_chat_id=$ADMIN_CHAT_ID" \
+            -e "mini_app_url=$MINI_APP_URL" \
+            -e "grafana_user=$GRAFANA_USER" \
+            -e "grafana_password=$GRAFANA_PASSWORD" \
+            -e "app_environment=$ENVIRONMENT" \
+            -e "cors_origins=$CORS_ORIGINS" \
+            -e "login_code_expiry_minutes=$LOGIN_CODE_EXPIRY_MINUTES" \
+            -e "password_reset_expiry_minutes=$PASSWORD_RESET_EXPIRY_MINUTES" \
             --private-key ~/.ssh/deploy
 
   update-env-production:
@@ -96,36 +123,63 @@ jobs:
         working-directory: ansible
         env:
           ANSIBLE_HOST_KEY_CHECKING: "false"
+          ADMIN_CHAT_ID: ${{ secrets.ADMIN_CHAT_ID }}
+          ADMIN_EMAIL: ${{ secrets.ADMIN_EMAIL }}
+          ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
+          CERTBOT_EMAIL: ${{ secrets.CERTBOT_EMAIL }}
+          CORS_ORIGINS: ${{ secrets.CORS_ORIGINS }}
+          DEPLOY_DIR: ${{ secrets.DEPLOY_DIR }}
+          DOMAIN: ${{ secrets.DOMAIN }}
+          EMAIL_HASH_SECRET: ${{ secrets.EMAIL_HASH_SECRET }}
+          ENVIRONMENT: ${{ secrets.ENVIRONMENT }}
+          GRAFANA_PASSWORD: ${{ secrets.GRAFANA_PASSWORD }}
+          GRAFANA_USER: ${{ secrets.GRAFANA_USER }}
+          LOGIN_CODE_EXPIRY_MINUTES: ${{ secrets.LOGIN_CODE_EXPIRY_MINUTES }}
+          MAIL_FROM: ${{ secrets.MAIL_FROM }}
+          MAIL_FROM_NAME: ${{ secrets.MAIL_FROM_NAME }}
+          MAIL_PASSWORD: ${{ secrets.MAIL_PASSWORD }}
+          MAIL_PORT: ${{ secrets.MAIL_PORT }}
+          MAIL_SERVER: ${{ secrets.MAIL_SERVER }}
+          MAIL_USERNAME: ${{ secrets.MAIL_USERNAME }}
+          MINI_APP_URL: ${{ secrets.MINI_APP_URL }}
+          PASSWORD_RESET_EXPIRY_MINUTES: ${{ secrets.PASSWORD_RESET_EXPIRY_MINUTES }}
+          POSTGRES_DB: ${{ secrets.POSTGRES_DB }}
+          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+          POSTGRES_USER: ${{ secrets.POSTGRES_USER }}
+          SECRET_KEY: ${{ secrets.SECRET_KEY }}
+          SERVER_HOST: ${{ secrets.SERVER_HOST }}
+          SERVER_USER: ${{ secrets.SERVER_USER }}
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
         run: |
           ansible-playbook playbooks/setup-server.yml \
             --limit production \
             --tags env \
-            -e "server_ip=${{ secrets.SERVER_HOST }}" \
-            -e "server_user=${{ secrets.SERVER_USER }}" \
+            -e "server_ip=$SERVER_HOST" \
+            -e "server_user=$SERVER_USER" \
             -e "ghcr_user=${{ github.actor }}" \
-            -e "deploy_dir=${{ secrets.DEPLOY_DIR }}" \
-            -e "domain=${{ secrets.DOMAIN }}" \
-            -e "certbot_email=${{ secrets.CERTBOT_EMAIL }}" \
-            -e "postgres_password=${{ secrets.POSTGRES_PASSWORD }}" \
-            -e "postgres_user=${{ secrets.POSTGRES_USER }}" \
-            -e "postgres_db=${{ secrets.POSTGRES_DB }}" \
-            -e "secret_key=${{ secrets.SECRET_KEY }}" \
-            -e "admin_email=${{ secrets.ADMIN_EMAIL }}" \
-            -e "admin_password=${{ secrets.ADMIN_PASSWORD }}" \
-            -e "email_hash_secret=${{ secrets.EMAIL_HASH_SECRET }}" \
-            -e "mail_username=${{ secrets.MAIL_USERNAME }}" \
-            -e "mail_password=${{ secrets.MAIL_PASSWORD }}" \
-            -e "mail_from=${{ secrets.MAIL_FROM }}" \
-            -e "mail_from_name=${{ secrets.MAIL_FROM_NAME }}" \
-            -e "mail_server=${{ secrets.MAIL_SERVER }}" \
-            -e "mail_port=${{ secrets.MAIL_PORT }}" \
-            -e "telegram_token=${{ secrets.TELEGRAM_TOKEN }}" \
-            -e "admin_chat_id=${{ secrets.ADMIN_CHAT_ID }}" \
-            -e "mini_app_url=${{ secrets.MINI_APP_URL }}" \
-            -e "grafana_user=${{ secrets.GRAFANA_USER }}" \
-            -e "grafana_password=${{ secrets.GRAFANA_PASSWORD }}" \
-            -e "app_environment=${{ secrets.ENVIRONMENT }}" \
-            -e "cors_origins=${{ secrets.CORS_ORIGINS }}" \
-            -e "login_code_expiry_minutes=${{ secrets.LOGIN_CODE_EXPIRY_MINUTES }}" \
-            -e "password_reset_expiry_minutes=${{ secrets.PASSWORD_RESET_EXPIRY_MINUTES }}" \
+            -e "deploy_dir=$DEPLOY_DIR" \
+            -e "domain=$DOMAIN" \
+            -e "certbot_email=$CERTBOT_EMAIL" \
+            -e "postgres_password=$POSTGRES_PASSWORD" \
+            -e "postgres_user=$POSTGRES_USER" \
+            -e "postgres_db=$POSTGRES_DB" \
+            -e "secret_key=$SECRET_KEY" \
+            -e "admin_email=$ADMIN_EMAIL" \
+            -e "admin_password=$ADMIN_PASSWORD" \
+            -e "email_hash_secret=$EMAIL_HASH_SECRET" \
+            -e "mail_username=$MAIL_USERNAME" \
+            -e "mail_password=$MAIL_PASSWORD" \
+            -e "mail_from=$MAIL_FROM" \
+            -e "mail_from_name=$MAIL_FROM_NAME" \
+            -e "mail_server=$MAIL_SERVER" \
+            -e "mail_port=$MAIL_PORT" \
+            -e "telegram_token=$TELEGRAM_TOKEN" \
+            -e "admin_chat_id=$ADMIN_CHAT_ID" \
+            -e "mini_app_url=$MINI_APP_URL" \
+            -e "grafana_user=$GRAFANA_USER" \
+            -e "grafana_password=$GRAFANA_PASSWORD" \
+            -e "app_environment=$ENVIRONMENT" \
+            -e "cors_origins=$CORS_ORIGINS" \
+            -e "login_code_expiry_minutes=$LOGIN_CODE_EXPIRY_MINUTES" \
+            -e "password_reset_expiry_minutes=$PASSWORD_RESET_EXPIRY_MINUTES" \
             --private-key ~/.ssh/deploy
